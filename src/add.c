@@ -3,6 +3,7 @@
 static int input_check(int argc, char **argv);
 
 int add(int argc, char **argv) {
+
 	char cwd[PATH_MAX];
 	file_data **files = NULL;
 	int len_files = 0;
@@ -30,6 +31,11 @@ int add(int argc, char **argv) {
 	}
 
 	printf("\nTotal files found: %d\n", len_files);
+
+	if (create_blob_and_indexing(files,len_files,cwd) != 0){
+		return -1;
+	}
+
 	return 0;
 }
 

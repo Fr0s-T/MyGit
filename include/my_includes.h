@@ -20,6 +20,7 @@
 #include "../include/file_data.h"
 #include "../include/add_traversal.h"
 #include "../include/hash.h"
+#include "../include/add_creating_blob_and_indexing.h"
 
 
 # define C_RESET   "\033[0m"
