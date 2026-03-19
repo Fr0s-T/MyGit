@@ -95,3 +95,4 @@ char *normalize_path(char *generate_path, char *cwd){
 	trimmed = strdup(generate_path + root_len);
 	return (trimmed);
 }
+

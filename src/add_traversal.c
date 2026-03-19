@@ -38,6 +38,7 @@ static int should_skip_entry(const char *entry_name) {
 		strcmp(entry_name, "..") == 0 ||
 		strcmp(entry_name, ".mygit") == 0 ||
 		strcmp(entry_name, ".git") == 0 ||
+		strcmp(entry_name, "out") == 0 ||
 		strcmp(entry_name, ".vscode") == 0) {
 		return 1;
 	}
@@ -82,8 +83,14 @@ static int append_file_data(file_data ***files, int *len_files, char *resolved_p
 	}
 
 	*files = tmp;
+	
+	char hash[41];
+	if (hash_file_sha1(resolved_path,hash) != 0){
+		printf("Hashing failed on: %s",resolved_path);
+		return -1;
+	}
 
-	(*files)[*len_files] = file_data_create(normalize_path(resolved_path,cwd), NULL);
+	(*files)[*len_files] = file_data_create(normalize_path(resolved_path,cwd), hash);
 	if ((*files)[*len_files] == NULL) {
 		return -1;
 	}

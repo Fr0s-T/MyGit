@@ -23,9 +23,10 @@ int add(int argc, char **argv) {
 	}
 
 	for (int i = 0; i < len_files; i++) {
-		printf("\n[From add] the file is :%s and its hash:%s",
-			files[i]->path,
-			files[i]->hash);
+		printf(C_YELLOW "[From add] " C_RESET
+			"file: " C_RED "%s" C_RESET
+			" | hash: " C_BLUE "%s" C_RESET "\n",
+			files[i]->path, files[i]->hash);
 	}
 
 	printf("\nTotal files found: %d\n", len_files);

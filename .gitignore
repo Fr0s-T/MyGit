@@ -2,6 +2,8 @@
 .vscode/
 .idea/
 out/
+Makefile
+*.o
 *.log
 *.tmp
 *.bak
