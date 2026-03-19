@@ -18,7 +18,7 @@ int add(int argc, char **argv) {
 
 	printf("cwd: %s\n", cwd);
 
-	if (traverse_directory(cwd, &files, &len_files) == -1) {
+	if (traverse_directory(cwd, &files, &len_files,cwd) == -1) {
 		return -1;
 	}
 

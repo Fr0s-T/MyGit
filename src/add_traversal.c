@@ -2,13 +2,13 @@
 
 static int should_skip_entry(const char *entry_name);
 static int process_directory_entry(const char *parent_dir_path, struct dirent *entry,
-	file_data ***files, int *len_files);
+	file_data ***files, int *len_files, char *cwd);
 static int resolve_entry_path(const char *parent_dir_path, const char *entry_name,
 	char **entry_path, char **resolved_path);
 static int get_entry_stat(const char *path, struct stat *entry_stat);
-static int append_file_data(file_data ***files, int *len_files, const char *resolved_path);
+static int append_file_data(file_data ***files, int *len_files, char *resolved_path, char *cwd);
 
-int traverse_directory(const char *directory_path, file_data ***files, int *len_files) {
+int traverse_directory(const char *directory_path, file_data ***files, int *len_files, char *cwd) {
 	DIR *current_dir;
 	struct dirent *entry;
 
@@ -23,7 +23,7 @@ int traverse_directory(const char *directory_path, file_data ***files, int *len_
 			continue;
 		}
 
-		if (process_directory_entry(directory_path, entry, files, len_files) == -1) {
+		if (process_directory_entry(directory_path, entry, files, len_files, cwd) == -1) {
 			closedir(current_dir);
 			return -1;
 		}
@@ -37,6 +37,7 @@ static int should_skip_entry(const char *entry_name) {
 	if (strcmp(entry_name, ".") == 0 ||
 		strcmp(entry_name, "..") == 0 ||
 		strcmp(entry_name, ".mygit") == 0 ||
+		strcmp(entry_name, ".git") == 0 ||
 		strcmp(entry_name, ".vscode") == 0) {
 		return 1;
 	}
@@ -72,7 +73,7 @@ static int get_entry_stat(const char *path, struct stat *entry_stat) {
 	return 0;
 }
 
-static int append_file_data(file_data ***files, int *len_files, const char *resolved_path) {
+static int append_file_data(file_data ***files, int *len_files, char *resolved_path,char *cwd) {
 	file_data **tmp;
 
 	tmp = realloc(*files, (*len_files + 1) * sizeof(file_data *));
@@ -82,7 +83,7 @@ static int append_file_data(file_data ***files, int *len_files, const char *reso
 
 	*files = tmp;
 
-	(*files)[*len_files] = file_data_create(resolved_path, NULL);
+	(*files)[*len_files] = file_data_create(normalize_path(resolved_path,cwd), NULL);
 	if ((*files)[*len_files] == NULL) {
 		return -1;
 	}
@@ -92,7 +93,7 @@ static int append_file_data(file_data ***files, int *len_files, const char *reso
 }
 
 static int process_directory_entry(const char *parent_dir_path, struct dirent *entry,
-	file_data ***files, int *len_files) {
+	file_data ***files, int *len_files,char *cwd) {
 	char *entry_path = NULL;
 	char *resolved_path = NULL;
 	struct stat entry_stat;
@@ -112,14 +113,14 @@ static int process_directory_entry(const char *parent_dir_path, struct dirent *e
 	}
 
 	if (S_ISDIR(entry_stat.st_mode)) {
-		if (traverse_directory(resolved_path, files, len_files) == -1) {
+		if (traverse_directory(resolved_path, files, len_files,cwd) == -1) {
 			free(entry_path);
 			free(resolved_path);
 			return -1;
 		}
 	}
 	else if (S_ISREG(entry_stat.st_mode)) {
-		if (append_file_data(files, len_files, resolved_path) == -1) {
+		if (append_file_data(files, len_files, resolved_path,cwd) == -1) {
 			free(entry_path);
 			free(resolved_path);
 			return -1;

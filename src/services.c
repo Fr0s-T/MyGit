@@ -75,3 +75,23 @@ int create_empty_file(const char *file_path_with_name_included) {
 	printf("\ncreating %s\n", file_path_with_name_included);
 	return 0;
 }
+
+char *normalize_path(char *generate_path, char *cwd){
+
+	size_t	root_len;
+	char	*trimmed;
+
+	if (!generate_path || !cwd)
+		return (NULL);
+
+	root_len = strlen(cwd);
+
+	if (strncmp(generate_path, cwd, root_len) != 0)
+		return (strdup(generate_path));
+		
+	if (generate_path[root_len] == '/')
+		root_len++;
+
+	trimmed = strdup(generate_path + root_len);
+	return (trimmed);
+}

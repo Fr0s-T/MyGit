@@ -1,6 +1,7 @@
 .mygit/
 .vscode/
 .idea/
+out/
 *.log
 *.tmp
 *.bak

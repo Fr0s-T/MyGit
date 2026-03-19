@@ -3,6 +3,6 @@
 
 #include "file_data.h"
 
-int traverse_directory(const char *directory_path, file_data ***files, int *len_files);
+int traverse_directory(const char *directory_path, file_data ***files, int *len_files, char *cwd);
 
 #endif
