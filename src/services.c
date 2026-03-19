@@ -1,0 +1,77 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
+#include "../include/my_includes.h"
+
+/*
+** Creates a directory at the given path.
+** Returns:
+**  0  on success
+** -1  on failure
+*/
+int create_directory(const char *path) {
+	if (mkdir(path, 0755) == 0) {
+		printf("\ncreating %s\n", path);
+		return 0;
+	}
+
+	switch (errno) {
+		case EACCES:
+			printf("\nPermission denied: %s\n", path);
+			break;
+		case EEXIST:
+			printf("\nDirectory already exists: %s\n", path);
+			break;
+		case ENOENT:
+			printf("\nParent directory does not exist: %s\n", path);
+			break;
+		case ENAMETOOLONG:
+			printf("\nPath too long: %s\n", path);
+			break;
+		default:
+			perror("mkdir");
+			break;
+	}
+
+	return -1;
+}
+
+/*
+** Builds a new heap-allocated path of the form:
+** base/extension
+**
+** The caller owns the returned memory and must free it.
+*/
+char *generate_path(const char *base, const char *extension) {
+	size_t len = strlen(base) + strlen(extension) + 2; /* '/' + '\0' */
+
+	char *path = malloc(len);
+	if (path == NULL) {
+		perror("malloc");
+		return NULL;
+	}
+
+	snprintf(path, len, "%s/%s", base, extension);
+	return path;
+}
+
+/*
+** Creates an empty file at the given path.
+** Returns:
+**  0  on success
+** -1  on failure
+*/
+int create_empty_file(const char *file_path_with_name_included) {
+	FILE *new_file = fopen(file_path_with_name_included, "w");
+	if (new_file == NULL) {
+		printf("\nCouldn't create file: %s\n", file_path_with_name_included);
+		return -1;
+	}
+
+	fclose(new_file);
+	printf("\ncreating %s\n", file_path_with_name_included);
+	return 0;
+}

@@ -1,0 +1,7 @@
+.mygit/
+.vscode/
+.idea/
+*.log
+*.tmp
+*.bak
+*.swp
