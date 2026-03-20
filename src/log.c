@@ -5,6 +5,7 @@
 #include <linux/limits.h>
 
 #include "../include/colors.h"
+#include "../include/helpers/file_io.h"
 #include "../include/log.h"
 
 #define LOG_TAG_COLOR C_BLUE
@@ -19,7 +20,6 @@ typedef struct s_commit_info {
     char *parent_hash;
 } commit_info;
 
-static int read_first_line_from_file(const char *path, char **out);
 static char *duplicate_string(const char *value);
 static void trim_line_endings(char *value);
 static int load_commit_info(const char *commit_hash, commit_info *info);
@@ -41,12 +41,12 @@ int log_cmd(int argc, char **argv) {
             LOG_ERROR_COLOR "usage: mygit log\n" C_RESET);
         return (-1);
     }
-    if (read_first_line_from_file(".mygit/HEAD", &head_ref_path) == -1) {
+    if (file_io_read_first_line(".mygit/HEAD", &head_ref_path) == -1) {
         printf(LOG_TAG_COLOR "[log]" C_RESET " "
             LOG_ERROR_COLOR "failed to read HEAD\n" C_RESET);
         goto cleanup;
     }
-    if (read_first_line_from_file(head_ref_path, &current_commit_hash) == -1) {
+    if (file_io_read_first_line(head_ref_path, &current_commit_hash) == -1) {
         printf(LOG_TAG_COLOR "[log]" C_RESET " "
             LOG_ERROR_COLOR "failed to read current branch ref\n" C_RESET);
         goto cleanup;
@@ -85,35 +85,6 @@ cleanup:
     free(current_commit_hash);
     free(head_ref_path);
     return (status);
-}
-
-static int read_first_line_from_file(const char *path, char **out) {
-    FILE *file;
-    char buffer[PATH_MAX];
-
-    if (path == NULL || out == NULL) {
-        return (-1);
-    }
-    file = fopen(path, "r");
-    if (file == NULL) {
-        return (-1);
-    }
-    if (fgets(buffer, sizeof(buffer), file) == NULL) {
-        if (ferror(file)) {
-            fclose(file);
-            return (-1);
-        }
-        fclose(file);
-        *out = duplicate_string("");
-        return (*out == NULL ? -1 : 0);
-    }
-    fclose(file);
-    trim_line_endings(buffer);
-    *out = duplicate_string(buffer);
-    if (*out == NULL) {
-        return (-1);
-    }
-    return (0);
 }
 
 static char *duplicate_string(const char *value) {

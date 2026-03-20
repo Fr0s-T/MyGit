@@ -8,18 +8,15 @@
 #include "../../include/add_creating_blob_and_indexing.h"
 #include "../../include/hash.h"
 #include "../../include/helpers/commit_object.h"
+#include "../../include/helpers/file_io.h"
 #include "../../include/services.h"
 
 static char *duplicate_string(const char *value);
-static int read_first_line_from_file(const char *path, char **out);
-static int write_content_to_file(const char *path, const char *content);
 static int write_object_file(const char *object_hash, const char *payload);
 static int read_tree_hash_from_commit(const char *commit_hash, char **tree_hash);
 static int build_commit_payload(const char *root_hash, const char *branch_name,
     const char *parent_hash, const char *commit_msg, char **payload);
 static char *extract_branch_name(const char *ref_path);
-static void trim_line_endings(char *value);
-static void trim_leading_line_endings(char *value);
 
 int accept_commit(node *root, const char *commit_msg,
     char out[SHA1_HEX_BUFFER_SIZE]) {
@@ -41,13 +38,13 @@ int accept_commit(node *root, const char *commit_msg,
     if (root == NULL || root->hash == NULL || commit_msg == NULL || out == NULL) {
         return (-1);
     }
-    if (read_first_line_from_file(".mygit/HEAD", &head_ref_path) == -1) {
+    if (file_io_read_first_line(".mygit/HEAD", &head_ref_path) == -1) {
         goto cleanup;
     }
     if (head_ref_path[0] == '\0') {
         goto cleanup;
     }
-    if (read_first_line_from_file(head_ref_path, &current_commit_hash) == -1) {
+    if (file_io_read_first_line(head_ref_path, &current_commit_hash) == -1) {
         goto cleanup;
     }
     if (current_commit_hash[0] != '\0') {
@@ -74,7 +71,7 @@ int accept_commit(node *root, const char *commit_msg,
     if (write_object_file(new_commit_hash, payload) == -1) {
         goto cleanup;
     }
-    if (write_content_to_file(head_ref_path, new_commit_hash) == -1) {
+    if (file_io_write_text(head_ref_path, new_commit_hash) == -1) {
         goto cleanup;
     }
     strcpy(out, new_commit_hash);
@@ -104,56 +101,6 @@ static char *duplicate_string(const char *value) {
     return (copy);
 }
 
-static int read_first_line_from_file(const char *path, char **out) {
-    FILE *file;
-    char buffer[PATH_MAX];
-
-    if (path == NULL || out == NULL) {
-        return (-1);
-    }
-    file = fopen(path, "r");
-    if (file == NULL) {
-        return (-1);
-    }
-    if (fgets(buffer, sizeof(buffer), file) == NULL) {
-        if (ferror(file)) {
-            fclose(file);
-            return (-1);
-        }
-        fclose(file);
-        *out = duplicate_string("");
-        return (*out == NULL ? -1 : 0);
-    }
-    fclose(file);
-    trim_line_endings(buffer);
-    trim_leading_line_endings(buffer);
-    *out = duplicate_string(buffer);
-    if (*out == NULL) {
-        return (-1);
-    }
-    return (0);
-}
-
-static int write_content_to_file(const char *path, const char *content) {
-    FILE *file;
-    size_t content_len;
-
-    if (path == NULL || content == NULL) {
-        return (-1);
-    }
-    file = fopen(path, "wb");
-    if (file == NULL) {
-        return (-1);
-    }
-    content_len = strlen(content);
-    if (fwrite(content, 1, content_len, file) != content_len) {
-        fclose(file);
-        return (-1);
-    }
-    fclose(file);
-    return (0);
-}
-
 static int write_object_file(const char *object_hash, const char *payload) {
     char cwd[PATH_MAX];
     char *git_obj_path;
@@ -175,7 +122,7 @@ static int write_object_file(const char *object_hash, const char *payload) {
     if (object_path == NULL) {
         return (-1);
     }
-    status = write_content_to_file(object_path, payload);
+    status = file_io_write_text(object_path, payload);
     if (status == -1) {
         remove(object_path);
     }
@@ -204,7 +151,7 @@ static int read_tree_hash_from_commit(const char *commit_hash, char **tree_hash)
     if (commit_object_path == NULL) {
         return (-1);
     }
-    if (read_first_line_from_file(commit_object_path, &first_line) == -1) {
+    if (file_io_read_first_line(commit_object_path, &first_line) == -1) {
         free(commit_object_path);
         return (-1);
     }
@@ -264,35 +211,4 @@ static char *extract_branch_name(const char *ref_path) {
         return (duplicate_string(ref_path));
     }
     return (duplicate_string(last_slash + 1));
-}
-
-static void trim_line_endings(char *value) {
-    size_t len;
-
-    if (value == NULL) {
-        return ;
-    }
-    len = strlen(value);
-    while (len > 0 && (value[len - 1] == '\n' || value[len - 1] == '\r')) {
-        value[len - 1] = '\0';
-        len--;
-    }
-}
-
-static void trim_leading_line_endings(char *value) {
-    size_t start;
-    size_t len;
-
-    if (value == NULL) {
-        return ;
-    }
-    start = 0;
-    while (value[start] == '\n' || value[start] == '\r') {
-        start++;
-    }
-    if (start == 0) {
-        return ;
-    }
-    len = strlen(value + start);
-    memmove(value, value + start, len + 1);
 }

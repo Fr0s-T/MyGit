@@ -9,12 +9,11 @@
 #include "../include/add_traversal.h"
 #include "../include/file_data.h"
 #include "../include/hash.h"
+#include "../include/helpers/file_io.h"
 
 static int input_check(int argc, char **argv);
 static void destroy_file_list(file_data **files, int len_files);
 static int filter_unchanged_files(file_data **files, int *len_files, const char *cwd);
-static int read_index_hash_for_path(const char *cwd, const char *path,
-    char out[SHA1_HEX_BUFFER_SIZE]);
 
 int add(int argc, char **argv) {
     char cwd[PATH_MAX];
@@ -87,9 +86,13 @@ static void destroy_file_list(file_data **files, int len_files) {
 }
 
 static int filter_unchanged_files(file_data **files, int *len_files, const char *cwd) {
+    char index_path[PATH_MAX];
     int write_index;
 
     if (files == NULL || len_files == NULL || cwd == NULL) {
+        return (-1);
+    }
+    if (snprintf(index_path, sizeof(index_path), "%s/.mygit/index", cwd) >= (int)sizeof(index_path)) {
         return (-1);
     }
     write_index = 0;
@@ -97,7 +100,7 @@ static int filter_unchanged_files(file_data **files, int *len_files, const char 
         char tracked_hash[SHA1_HEX_BUFFER_SIZE];
         int lookup_status;
 
-        lookup_status = read_index_hash_for_path(cwd, files[read_index]->path, tracked_hash);
+        lookup_status = file_io_read_index_hash(index_path, files[read_index]->path, tracked_hash);
         if (lookup_status == -1) {
             return (-1);
         }
@@ -109,51 +112,5 @@ static int filter_unchanged_files(file_data **files, int *len_files, const char 
         write_index++;
     }
     *len_files = write_index;
-    return (0);
-}
-
-static int read_index_hash_for_path(const char *cwd, const char *path, char out[SHA1_HEX_BUFFER_SIZE]) {
-    char index_path[PATH_MAX];
-    FILE *index_file;
-    char line[PATH_MAX + SHA1_HEX_BUFFER_SIZE + 8];
-
-    if (cwd == NULL || path == NULL || out == NULL) {
-        return (-1);
-    }
-    if (snprintf(index_path, sizeof(index_path), "%s/.mygit/index", cwd) >= (int)sizeof(index_path)) {
-        return (-1);
-    }
-    index_file = fopen(index_path, "r");
-    if (index_file == NULL) {
-        return (0);
-    }
-    while (fgets(line, sizeof(line), index_file) != NULL) {
-        char *tab;
-        char *line_end;
-        size_t path_len;
-        size_t hash_len;
-
-        tab = strchr(line, '\t');
-        if (tab == NULL) {
-            continue;
-        }
-        line_end = strpbrk(tab + 1, "\r\n");
-        if (line_end == NULL) {
-            line_end = line + strlen(line);
-        }
-        path_len = (size_t)(tab - line);
-        hash_len = (size_t)(line_end - (tab + 1));
-        if (strlen(path) == path_len && strncmp(line, path, path_len) == 0) {
-            if (hash_len >= SHA1_HEX_BUFFER_SIZE) {
-                fclose(index_file);
-                return (-1);
-            }
-            memcpy(out, tab + 1, hash_len);
-            out[hash_len] = '\0';
-            fclose(index_file);
-            return (1);
-        }
-    }
-    fclose(index_file);
     return (0);
 }

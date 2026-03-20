@@ -6,6 +6,7 @@
 
 #include "../../include/add_creating_blob_and_indexing.h"
 #include "../../include/hash.h"
+#include "../../include/helpers/file_io.h"
 #include "../../include/helpers/commit_tree.h"
 #include "../../include/node.h"
 #include "../../include/services.h"
@@ -18,7 +19,6 @@ static void trim_line_endings(char *value);
 static void trim_leading_line_endings(char *value);
 static int write_tree_object(const char *tree_hash, const char *payload);
 static int write_object_file(const char *object_hash, const char *payload);
-static int write_content_to_file(const char *path, const char *content);
 
 int build_tree_pass_one(char *index_path, node *root) {
     FILE *index_file;
@@ -193,30 +193,10 @@ static int write_object_file(const char *object_hash, const char *payload) {
     if (object_path == NULL) {
         return (-1);
     }
-    status = write_content_to_file(object_path, payload);
+    status = file_io_write_text(object_path, payload);
     if (status == -1) {
         remove(object_path);
     }
     free(object_path);
     return (status);
-}
-
-static int write_content_to_file(const char *path, const char *content) {
-    FILE *file;
-    size_t content_len;
-
-    if (path == NULL || content == NULL) {
-        return (-1);
-    }
-    file = fopen(path, "wb");
-    if (file == NULL) {
-        return (-1);
-    }
-    content_len = strlen(content);
-    if (fwrite(content, 1, content_len, file) != content_len) {
-        fclose(file);
-        return (-1);
-    }
-    fclose(file);
-    return (0);
 }
