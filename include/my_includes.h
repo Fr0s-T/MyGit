@@ -21,7 +21,8 @@
 #include "../include/add_traversal.h"
 #include "../include/hash.h"
 #include "../include/add_creating_blob_and_indexing.h"
-
+#include "../include/node.h"
+#include "../include/commit.h"
 
 # define C_RESET   "\033[0m"
 # define C_BOLD    "\033[1m"
