@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "../include/my_includes.h"
+
+#include "../include/init.h"
+#include "../include/services.h"
 
 /*
 ** Internal helpers used only by init.c.

@@ -1,9 +1,20 @@
-#include "../include/my_includes.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <linux/limits.h>
+
+#include "../include/add.h"
+#include "../include/add_creating_blob_and_indexing.h"
+#include "../include/add_traversal.h"
+#include "../include/file_data.h"
+#include "../include/hash.h"
 
 static int input_check(int argc, char **argv);
 static void destroy_file_list(file_data **files, int len_files);
 static int filter_unchanged_files(file_data **files, int *len_files, const char *cwd);
-static int read_index_hash_for_path(const char *cwd, const char *path, char out[SHA1_HEX_BUFFER_SIZE]);
+static int read_index_hash_for_path(const char *cwd, const char *path,
+    char out[SHA1_HEX_BUFFER_SIZE]);
 
 int add(int argc, char **argv) {
     char cwd[PATH_MAX];

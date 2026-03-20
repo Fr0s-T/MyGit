@@ -1,4 +1,8 @@
-#include "../include/my_includes.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../include/node.h"
 
 enum e_node_constants {
     NODE_CHILDREN_INITIAL_CAPACITY = 2,

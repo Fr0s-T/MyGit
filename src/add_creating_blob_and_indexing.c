@@ -1,4 +1,14 @@
-#include "../include/my_includes.h"
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <linux/limits.h>
+
+#include "../include/add_creating_blob_and_indexing.h"
+#include "../include/file_data.h"
+#include "../include/hash.h"
+#include "../include/services.h"
 
 enum e_blob_constants {
     BLOB_COPY_BUFFER_SIZE = 4096,
@@ -65,9 +75,6 @@ int copy_file_content(char *src_path, char *dst_path) {
     char buffer[BLOB_COPY_BUFFER_SIZE];
     size_t bytes_read;
     size_t bytes_written;
-    size_t total_written;
-
-    total_written = 0;
     src_file = fopen(src_path, "rb");
     if (src_file == NULL) {
         return (-1);
@@ -86,7 +93,6 @@ int copy_file_content(char *src_path, char *dst_path) {
             remove(dst_path);
             return (-1);
         }
-        total_written += bytes_written;
         bytes_read = fread(buffer, 1, sizeof(buffer), src_file);
     }
     if (ferror(src_file)) {

@@ -1,4 +1,9 @@
-#include "../include/my_includes.h"
+#include <stdio.h>
+#include <string.h>
+
+#include "../include/add.h"
+#include "../include/commit.h"
+#include "../include/init.h"
 
 int router(int argc, char **argv);
 
