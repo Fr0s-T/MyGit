@@ -15,6 +15,7 @@
 
 #include "../include/colors.h"
 #include "../include/init.h"
+#include "../include/log.h"
 #include "../include/services.h"
 #include "../include/add.h"
 #include "../include/file_data.h"

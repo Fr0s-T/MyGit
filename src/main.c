@@ -4,6 +4,7 @@
 #include "../include/add.h"
 #include "../include/commit.h"
 #include "../include/init.h"
+#include "../include/log.h"
 
 int router(int argc, char **argv);
 
@@ -32,6 +33,9 @@ int router(int argc, char **argv) {
     else if (strcmp(argv[1], "commit") == 0) {
         printf("commit has been called\n");
         return commit(argc, argv);
+    }
+    else if (strcmp(argv[1], "log") == 0) {
+        return log_cmd(argc, argv);
     }
     return -1;
 }
