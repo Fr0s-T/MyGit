@@ -13,6 +13,7 @@
 static void failed_msg_printer(const char *name);
 static int create_subdirectory(const char *base, const char *name);
 static int create_file_in_directory(const char *base, const char *name);
+static int write_plain_text_file(const char *base, const char *name, const char *content);
 
 int init(int argc) {
     if (argc > 2) {
@@ -94,7 +95,7 @@ int init(int argc) {
         return -1;
     }
 
-    if (create_file_in_directory(repo_path, "HEAD") == -1) {
+    if (write_plain_text_file(repo_path, "HEAD", ".mygit/refs/heads/main") == -1) {
         free(repo_path);
         return -1;
     }
@@ -134,12 +135,14 @@ static int create_subdirectory(const char *base, const char *name) {
 */
 static int create_file_in_directory(const char *base, const char *name) {
     char *path = generate_path(base, name);
+    int status;
 
     if (path == NULL) {
         return -1;
     }
 
-    if (create_empty_file(path) == -1) {
+    status = create_empty_file(path);
+    if (status == -1) {
         failed_msg_printer(path);
         free(path);
         return -1;
@@ -147,6 +150,31 @@ static int create_file_in_directory(const char *base, const char *name) {
 
     free(path);
     return 0;
+}
+
+static int write_plain_text_file(const char *base, const char *name, const char *content) {
+    char *path;
+    FILE *file;
+
+    path = generate_path(base, name);
+    if (path == NULL) {
+        return (-1);
+    }
+    file = fopen(path, "w");
+    if (file == NULL) {
+        failed_msg_printer(path);
+        free(path);
+        return (-1);
+    }
+    if (content != NULL && fputs(content, file) == EOF) {
+        fclose(file);
+        failed_msg_printer(path);
+        free(path);
+        return (-1);
+    }
+    fclose(file);
+    free(path);
+    return (0);
 }
 
 /*

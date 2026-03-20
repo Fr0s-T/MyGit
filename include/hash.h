@@ -4,6 +4,7 @@
 # define SHA1_HEX_LENGTH 40
 # define SHA1_HEX_BUFFER_SIZE (SHA1_HEX_LENGTH + 1)
 
+char *sha1(const char *input);
 int hash_file_sha1(const char *file_path, char out[SHA1_HEX_BUFFER_SIZE]);
 
 #endif

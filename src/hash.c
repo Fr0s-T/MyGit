@@ -8,6 +8,42 @@ enum e_hash_constants {
 static void bytes_to_hex(const unsigned char *bytes, unsigned int len,
     char out[SHA1_HEX_BUFFER_SIZE]);
 
+char *sha1(const char *input) {
+    EVP_MD_CTX *ctx;
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    unsigned int digest_len;
+    char *out;
+
+    if (!input)
+        return (NULL);
+    ctx = EVP_MD_CTX_new();
+    if (!ctx)
+        return (NULL);
+    out = malloc(SHA1_HEX_BUFFER_SIZE);
+    if (!out) {
+        EVP_MD_CTX_free(ctx);
+        return (NULL);
+    }
+    if (EVP_DigestInit_ex(ctx, EVP_sha1(), NULL) != 1) {
+        EVP_MD_CTX_free(ctx);
+        free(out);
+        return (NULL);
+    }
+    if (EVP_DigestUpdate(ctx, input, strlen(input)) != 1) {
+        EVP_MD_CTX_free(ctx);
+        free(out);
+        return (NULL);
+    }
+    if (EVP_DigestFinal_ex(ctx, digest, &digest_len) != 1) {
+        EVP_MD_CTX_free(ctx);
+        free(out);
+        return (NULL);
+    }
+    bytes_to_hex(digest, digest_len, out);
+    EVP_MD_CTX_free(ctx);
+    return (out);
+}
+
 int hash_file_sha1(const char *file_path, char out[SHA1_HEX_BUFFER_SIZE]) {
     FILE *fp;
     EVP_MD_CTX *ctx;

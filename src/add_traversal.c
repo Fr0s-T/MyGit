@@ -92,7 +92,6 @@ static int append_file_data(file_data ***files, int *len_files, char *resolved_p
 
     char hash[PATH_HASH_BUFFER_SIZE];
     if (hash_file_sha1(resolved_path, hash) != 0) {
-        printf("Hashing failed on: %s", resolved_path);
         return -1;
     }
 
@@ -116,13 +115,9 @@ static int process_directory_entry(const char *parent_dir_path, struct dirent *e
     char *resolved_path = NULL;
     struct stat entry_stat;
 
-    printf("Currently scanning: %s\n", entry->d_name);
-
     if (resolve_entry_path(parent_dir_path, entry->d_name, &entry_path, &resolved_path) == -1) {
         return -1;
     }
-
-    printf("real_path: %s\n", resolved_path);
 
     if (get_entry_stat(resolved_path, &entry_stat) == -1) {
         free(entry_path);

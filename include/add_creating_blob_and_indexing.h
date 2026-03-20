@@ -4,5 +4,6 @@
 #include "file_data.h"
 
 int create_blob_and_indexing(file_data **files, int len_file, char *cwd);
+char *create_git_obj_dir(char *cwd);
 
 #endif

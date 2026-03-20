@@ -4,6 +4,7 @@
 #include <limits.h>
 
 typedef enum e_node_type {
+    NODE_ROOT,
     NODE_UNKNOWN,
     NODE_FILE,
     NODE_DIR
