@@ -3,16 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/branch.h"
-#include "../include/colors.h"
-#include "../include/helpers/file_io.h"
+#include "branch.h"
+#include "colors.h"
+#include "helpers/file_io.h"
 
 static int input_check(int argc, char **argv, char *b_name);
 static int branch_list(void);
-static int load_branch_names(char ***names_out, int *count_out);
 static const char *extract_branch_name(const char *head_ref);
 static int should_skip_branch_entry(const char *name);
-static void destroy_branch_names(char **names, int count);
 static int create_branch(char *name);
 
 int branch(int argc, char **argv) {
@@ -48,7 +46,7 @@ static int create_branch(char *name) {
     names = NULL;
     count = 0;
 
-    if (load_branch_names(&names, &count) != 0) {
+    if (branch_load_names(&names, &count) != 0) {
         return (-1);
     }
 
@@ -83,7 +81,7 @@ static int create_branch(char *name) {
 cleanup:
     free(current_branch);
     free(new_branch_path);
-    destroy_branch_names(names, count);
+    branch_destroy_names(names, count);
     return (stat);
 }
 
@@ -106,7 +104,7 @@ static int branch_list(void) {
 
     current_branch_name = extract_branch_name(current_branch);
 
-    if (load_branch_names(&names, &count) != 0) {
+    if (branch_load_names(&names, &count) != 0) {
         goto cleanup;
     }
 
@@ -127,11 +125,11 @@ static int branch_list(void) {
 
 cleanup:
     free(current_branch);
-    destroy_branch_names(names, count);
+    branch_destroy_names(names, count);
     return (status);
 }
 
-static int load_branch_names(char ***names_out, int *count_out) {
+int branch_load_names(char ***names_out, int *count_out) {
     char **names;
     char **new_names;
     struct dirent *entry;
@@ -156,14 +154,14 @@ static int load_branch_names(char ***names_out, int *count_out) {
         new_names = realloc(names, (count + 1) * sizeof(char *));
         if (new_names == NULL) {
             closedir(dir);
-            destroy_branch_names(names, count);
+            branch_destroy_names(names, count);
             return (-1);
         }
         names = new_names;
         names[count] = malloc(strlen(entry->d_name) + 1);
         if (names[count] == NULL) {
             closedir(dir);
-            destroy_branch_names(names, count);
+            branch_destroy_names(names, count);
             return (-1);
         }
         strcpy(names[count], entry->d_name);
@@ -198,7 +196,7 @@ static int should_skip_branch_entry(const char *name) {
     return (0);
 }
 
-static void destroy_branch_names(char **names, int count) {
+void branch_destroy_names(char **names, int count) {
     if (names == NULL) {
         return ;
     }

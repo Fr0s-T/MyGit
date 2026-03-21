@@ -66,4 +66,19 @@ int file_io_copy_file(const char *src_path, const char *dst_path);
 int file_io_read_index_hash(const char *index_path, const char *file_path,
     char out_hash[SHA1_HEX_BUFFER_SIZE]);
 
+/*
+** Removes the first occurrence of substring from a writable string buffer.
+**
+** Returns:
+**  1  if substring was found and removed
+**  0  if substring was not found
+** -1  on invalid input
+**
+** Notes:
+** - edits the original string in place
+** - does not allocate or resize memory
+** - caller must pass a writable buffer, not a string literal
+*/
+int file_io_strip_substring(char *string, const char *substring);
+
 #endif

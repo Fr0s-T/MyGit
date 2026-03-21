@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../../include/helpers/file_io.h"
+#include "helpers/file_io.h"
 
 enum e_file_io_constants {
     FILE_IO_COPY_BUFFER_SIZE = 4096,
@@ -182,6 +182,22 @@ int file_io_read_index_hash(const char *index_path, const char *file_path,
     }
     fclose(index_file);
     return (0);
+}
+
+int file_io_strip_substring(char *string, const char *substring) {
+    char *match;
+    size_t substring_len;
+
+    if (string == NULL || substring == NULL || substring[0] == '\0') {
+        return (-1);
+    }
+    match = strstr(string, substring);
+    if (match == NULL) {
+        return (0);
+    }
+    substring_len = strlen(substring);
+    memmove(match, match + substring_len, strlen(match + substring_len) + 1);
+    return (1);
 }
 
 /*

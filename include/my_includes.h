@@ -14,18 +14,20 @@
 #include <openssl/sha.h>
 #include <dirent.h>
 
-#include "../include/colors.h"
-#include "../include/init.h"
-#include "../include/branch.h"
-#include "../include/log.h"
-#include "../include/services.h"
-#include "../include/add.h"
-#include "../include/file_data.h"
-#include "../include/add_traversal.h"
-#include "../include/hash.h"
-#include "../include/add_creating_blob_and_indexing.h"
-#include "../include/node.h"
-#include "../include/commit.h"
-#include "../include/helpers/file_io.h"
+#include "colors.h"
+#include "init.h"
+#include "branch.h"
+#include "checkout.h"
+#include "log.h"
+#include "services.h"
+#include "add.h"
+#include "add_snapshot.h"
+#include "file_data.h"
+#include "add_traversal.h"
+#include "hash.h"
+#include "add_creating_blob_and_indexing.h"
+#include "node.h"
+#include "commit.h"
+#include "helpers/file_io.h"
 
 #endif

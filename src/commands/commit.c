@@ -4,13 +4,12 @@
 #include <unistd.h>
 #include <linux/limits.h>
 
-#include "../include/colors.h"
-#include "../include/commit.h"
-#include "../include/hash.h"
-#include "../include/helpers/commit_object.h"
-#include "../include/helpers/commit_tree.h"
-#include "../include/node.h"
-#include "../include/services.h"
+#include "colors.h"
+#include "commit.h"
+#include "hash.h"
+#include "helpers/commit_object.h"
+#include "helpers/commit_tree.h"
+#include "services.h"
 
 #define COMMIT_TAG_COLOR C_BLUE
 #define COMMIT_VALUE_COLOR C_CYAN
@@ -43,12 +42,6 @@ int commit(int argc, char **argv) {
             COMMIT_ERROR_COLOR "failed to get working dir\n" C_RESET);
         goto cleanup;
     }
-    root = node_create("root", NULL, NODE_ROOT, NULL);
-    if (root == NULL) {
-        printf(COMMIT_TAG_COLOR "[commit]" C_RESET " "
-            COMMIT_ERROR_COLOR "failed to create root node\n" C_RESET);
-        goto cleanup;
-    }
     temp_path = generate_path(cwd, ".mygit");
     if (temp_path == NULL) {
         printf(COMMIT_TAG_COLOR "[commit]" C_RESET " "
@@ -61,14 +54,9 @@ int commit(int argc, char **argv) {
             COMMIT_ERROR_COLOR "failed to build index path\n" C_RESET);
         goto cleanup;
     }
-    if (build_tree_pass_one(index_path, root) != 0) {
+    if (build_tree_from_index_path(index_path, 1, &root) != 0) {
         printf(COMMIT_TAG_COLOR "[commit]" C_RESET " "
-            COMMIT_ERROR_COLOR "build_tree_pass_one failed\n" C_RESET);
-        goto cleanup;
-    }
-    if (build_tree_second_pass_recursive_ascent(root) != 0) {
-        printf(COMMIT_TAG_COLOR "[commit]" C_RESET " "
-            COMMIT_ERROR_COLOR "build_tree_second_pass_recursive_ascent failed\n" C_RESET);
+            COMMIT_ERROR_COLOR "failed to build tree from index\n" C_RESET);
         goto cleanup;
     }
     accept_status = accept_commit(root, commit_msg, commit_hash);

@@ -1,0 +1,193 @@
+#include "my_includes.h"
+#include "checkout_prepare.h"
+#include "helpers/commit_object.h"
+#include "helpers/commit_tree.h"
+
+int checkout_input_check(int argc, char **argv, char **branch_name) {
+    if (branch_name == NULL) {
+        return (-1);
+    }
+    if (argc != 3 || strcmp(argv[1], "checkout") != 0) {
+        printf("[checkout] usage: mygit checkout branch_name\n");
+        return (-1);
+    }
+    *branch_name = argv[2];
+    return (0);
+}
+
+int checkout_branch_exists(const char *branch_name) {
+    char **names;
+    int count;
+    int exists;
+
+    names = NULL;
+    count = 0;
+    exists = 0;
+    if (branch_name == NULL) {
+        return (0);
+    }
+    if (branch_load_names(&names, &count) != 0) {
+        return (0);
+    }
+    for (int i = 0; i < count; i++) {
+        if (strcmp(names[i], branch_name) == 0) {
+            exists = 1;
+            break;
+        }
+    }
+    branch_destroy_names(names, count);
+    return (exists);
+}
+
+int checkout_repo_is_up_to_date_with_branch(void) {
+    char cwd[PATH_MAX];
+    char *head_ref_path;
+    char *head_commit_hash;
+    char *head_tree_hash;
+    file_data **changed_files;
+    int changed_count;
+    char *git_dir_path;
+    char *index_path;
+    node *root;
+    int status;
+
+    head_ref_path = NULL;
+    head_commit_hash = NULL;
+    head_tree_hash = NULL;
+    changed_files = NULL;
+    changed_count = 0;
+    git_dir_path = NULL;
+    index_path = NULL;
+    root = NULL;
+    status = -1;
+
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        goto cleanup;
+    }
+    if (add_collect_changed_files(cwd, &changed_files, &changed_count) != 0) {
+        goto cleanup;
+    }
+    if (changed_count > 0) {
+        goto cleanup;
+    }
+    if (file_io_read_first_line(".mygit/HEAD", &head_ref_path) != 0) {
+        goto cleanup;
+    }
+    if (file_io_read_first_line(head_ref_path, &head_commit_hash) != 0) {
+        goto cleanup;
+    }
+    if (head_commit_hash[0] == '\0') {
+        status = 0;
+        goto cleanup;
+    }
+    if (read_commit_tree_hash(head_commit_hash, &head_tree_hash) != 0) {
+        goto cleanup;
+    }
+    git_dir_path = generate_path(cwd, ".mygit");
+    if (git_dir_path == NULL) {
+        goto cleanup;
+    }
+    index_path = generate_path(git_dir_path, "index");
+    if (index_path == NULL) {
+        goto cleanup;
+    }
+    if (build_tree_from_index_path(index_path, 0, &root) != 0) {
+        goto cleanup;
+    }
+    if (root->hash == NULL) {
+        goto cleanup;
+    }
+    if (strcmp(root->hash, head_tree_hash) != 0) {
+        goto cleanup;
+    }
+    status = 0;
+
+cleanup:
+    node_destroy(root);
+    free(index_path);
+    free(git_dir_path);
+    add_destroy_file_list(changed_files, changed_count);
+    free(head_tree_hash);
+    free(head_commit_hash);
+    free(head_ref_path);
+    return (status);
+}
+
+int checkout_read_target_commit(const char *branch_name,
+    char **target_ref_path, char **target_commit_hash) {
+    int needed;
+
+    if (branch_name == NULL || target_ref_path == NULL || target_commit_hash == NULL) {
+        return (-1);
+    }
+    *target_ref_path = NULL;
+    *target_commit_hash = NULL;
+    needed = snprintf(NULL, 0, ".mygit/refs/heads/%s", branch_name);
+    if (needed < 0) {
+        return (-1);
+    }
+    *target_ref_path = malloc((size_t)needed + 1);
+    if (*target_ref_path == NULL) {
+        return (-1);
+    }
+    snprintf(*target_ref_path, (size_t)needed + 1, ".mygit/refs/heads/%s", branch_name);
+    if (file_io_read_first_line(*target_ref_path, target_commit_hash) != 0) {
+        free(*target_ref_path);
+        *target_ref_path = NULL;
+        return (-1);
+    }
+    if (*target_commit_hash == NULL) {
+        free(*target_ref_path);
+        *target_ref_path = NULL;
+        return (-1);
+    }
+    return (0);
+}
+
+int checkout_read_target_root(const char *target_commit_hash,
+    char **root_hash, char **root_path) {
+    char *commit_path;
+    int needed;
+    int strip_status;
+
+    commit_path = NULL;
+    if (target_commit_hash == NULL || root_hash == NULL || root_path == NULL) {
+        return (-1);
+    }
+    *root_hash = NULL;
+    *root_path = NULL;
+    needed = snprintf(NULL, 0, ".mygit/objects/%s", target_commit_hash);
+    if (needed < 0) {
+        return (-1);
+    }
+    commit_path = malloc((size_t)needed + 1);
+    if (commit_path == NULL) {
+        return (-1);
+    }
+    snprintf(commit_path, (size_t)needed + 1, ".mygit/objects/%s", target_commit_hash);
+    if (file_io_read_first_line(commit_path, root_hash) != 0) {
+        free(commit_path);
+        return (-1);
+    }
+    free(commit_path);
+    strip_status = file_io_strip_substring(*root_hash, "tree ");
+    if (strip_status != 1) {
+        free(*root_hash);
+        *root_hash = NULL;
+        return (-1);
+    }
+    needed = snprintf(NULL, 0, ".mygit/objects/%s", *root_hash);
+    if (needed < 0) {
+        free(*root_hash);
+        *root_hash = NULL;
+        return (-1);
+    }
+    *root_path = malloc((size_t)needed + 1);
+    if (*root_path == NULL) {
+        free(*root_hash);
+        *root_hash = NULL;
+        return (-1);
+    }
+    snprintf(*root_path, (size_t)needed + 1, ".mygit/objects/%s", *root_hash);
+    return (0);
+}

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/node.h"
+#include "node.h"
 
 enum e_node_constants {
     NODE_CHILDREN_INITIAL_CAPACITY = 2,
@@ -20,6 +20,10 @@ static char *dup_or_null(const char *s) {
     strcpy(copy, s);
     return (copy);
 }
+
+static void print_tree_recursive(node *root, int depth, int *branch_state,
+    int is_last_child);
+static void print_tree_label(node *root);
 
 node *node_create(const char *name, const char *hash,
     node_type type, node *parent) {
@@ -92,12 +96,48 @@ node *find_child(node *current_node, char *child_name) {
  *
 */
 void print_tree(node *root, int depth) {
+    int branch_state[PATH_MAX];
+
     if (root == NULL) {
         return ;
     }
-    for (int i = 0; i < depth; i++) {
-        printf("  ");
+    for (int i = 0; i < PATH_MAX; i++) {
+        branch_state[i] = 0;
     }
+    print_tree_recursive(root, depth, branch_state, 1);
+}
+
+static void print_tree_recursive(node *root, int depth, int *branch_state,
+    int is_last_child) {
+    if (root == NULL) {
+        return ;
+    }
+    if (depth > 0) {
+        for (int i = 0; i < depth - 1; i++) {
+            if (branch_state[i] != 0) {
+                printf("|   ");
+            }
+            else {
+                printf("    ");
+            }
+        }
+        if (is_last_child != 0) {
+            printf("`-- ");
+        }
+        else {
+            printf("|-- ");
+        }
+    }
+    print_tree_label(root);
+    printf("\n");
+    branch_state[depth] = (is_last_child == 0);
+    for (int i = 0; i < root->children_count; i++) {
+        print_tree_recursive(root->children[i], depth + 1, branch_state,
+            i == root->children_count - 1);
+    }
+}
+
+static void print_tree_label(node *root) {
     if (root->name == NULL) {
         printf("(null)");
     }
@@ -109,10 +149,6 @@ void print_tree(node *root, int depth) {
     }
     if (root->hash != NULL) {
         printf(" [%s]", root->hash);
-    }
-    printf("\n");
-    for (int i = 0; i < root->children_count; i++) {
-        print_tree(root->children[i], depth + 1);
     }
 }
 

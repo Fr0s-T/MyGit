@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../include/services.h"
+#include "services.h"
 
 enum e_services_constants {
     DEFAULT_DIR_MODE = 0755,

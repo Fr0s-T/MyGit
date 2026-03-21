@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../include/add.h"
-#include "../include/branch.h"
-#include "../include/commit.h"
-#include "../include/init.h"
-#include "../include/log.h"
+#include "add.h"
+#include "branch.h"
+#include "checkout.h"
+#include "commit.h"
+#include "init.h"
+#include "log.h"
 
 int router(int argc, char **argv);
 
@@ -40,6 +41,9 @@ int router(int argc, char **argv) {
     }
     else if (strcmp(argv[1], "branch") == 0) {
         return branch(argc, argv);
+    }
+    else if (strcmp(argv[1], "checkout") == 0) {
+        return checkout(argc, argv);
     }
     return -1;
 }

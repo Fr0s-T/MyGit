@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "../include/helpers/file_io.h"
-#include "../include/init.h"
-#include "../include/services.h"
+#include "helpers/file_io.h"
+#include "init.h"
+#include "services.h"
 
 /*
 ** Internal helpers used only by init.c.

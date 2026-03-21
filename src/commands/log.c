@@ -4,9 +4,9 @@
 #include <time.h>
 #include <linux/limits.h>
 
-#include "../include/colors.h"
-#include "../include/helpers/file_io.h"
-#include "../include/log.h"
+#include "colors.h"
+#include "helpers/file_io.h"
+#include "log.h"
 
 #define LOG_TAG_COLOR C_BLUE
 #define LOG_LABEL_COLOR C_GREEN

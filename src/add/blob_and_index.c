@@ -5,11 +5,11 @@
 #include <unistd.h>
 #include <linux/limits.h>
 
-#include "../include/add_creating_blob_and_indexing.h"
-#include "../include/file_data.h"
-#include "../include/hash.h"
-#include "../include/helpers/file_io.h"
-#include "../include/services.h"
+#include "add_creating_blob_and_indexing.h"
+#include "file_data.h"
+#include "hash.h"
+#include "helpers/file_io.h"
+#include "services.h"
 
 enum e_blob_constants {
     BLOB_COPY_BUFFER_SIZE = 4096,

@@ -5,15 +5,14 @@
 #include <unistd.h>
 #include <linux/limits.h>
 
-#include "../../include/add_creating_blob_and_indexing.h"
-#include "../../include/hash.h"
-#include "../../include/helpers/commit_object.h"
-#include "../../include/helpers/file_io.h"
-#include "../../include/services.h"
+#include "add_creating_blob_and_indexing.h"
+#include "hash.h"
+#include "helpers/commit_object.h"
+#include "helpers/file_io.h"
+#include "services.h"
 
 static char *duplicate_string(const char *value);
 static int write_object_file(const char *object_hash, const char *payload);
-static int read_tree_hash_from_commit(const char *commit_hash, char **tree_hash);
 static int build_commit_payload(const char *root_hash, const char *branch_name,
     const char *parent_hash, const char *commit_msg, char **payload);
 static char *extract_branch_name(const char *ref_path);
@@ -48,7 +47,7 @@ int accept_commit(node *root, const char *commit_msg,
         goto cleanup;
     }
     if (current_commit_hash[0] != '\0') {
-        if (read_tree_hash_from_commit(current_commit_hash, &previous_tree_hash) == -1) {
+        if (read_commit_tree_hash(current_commit_hash, &previous_tree_hash) == -1) {
             goto cleanup;
         }
         if (strcmp(previous_tree_hash, root->hash) == 0) {
@@ -130,7 +129,7 @@ static int write_object_file(const char *object_hash, const char *payload) {
     return (status);
 }
 
-static int read_tree_hash_from_commit(const char *commit_hash, char **tree_hash) {
+int read_commit_tree_hash(const char *commit_hash, char **tree_hash) {
     char cwd[PATH_MAX];
     char *git_obj_path;
     char *commit_object_path;

@@ -4,7 +4,13 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Werror -Iinclude
 LDFLAGS = -lcrypto
 
-SRC = $(wildcard src/*.c) $(wildcard src/helpers/*.c) $(wildcard data_struct/*.c)
+SRC = $(wildcard src/*.c) \
+	$(wildcard src/commands/*.c) \
+	$(wildcard src/add/*.c) \
+	$(wildcard src/checkout/*.c) \
+	$(wildcard src/core/*.c) \
+	$(wildcard src/helpers/*.c) \
+	$(wildcard src/data_structures/*.c)
 OBJ = $(patsubst %.c,out/obj/%.o,$(SRC))
 
 all: $(NAME)

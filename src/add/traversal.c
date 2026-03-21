@@ -4,10 +4,10 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "../include/add_traversal.h"
-#include "../include/file_data.h"
-#include "../include/hash.h"
-#include "../include/services.h"
+#include "add_traversal.h"
+#include "file_data.h"
+#include "hash.h"
+#include "services.h"
 
 enum e_traversal_constants {
     PATH_HASH_BUFFER_SIZE = SHA1_HEX_BUFFER_SIZE,

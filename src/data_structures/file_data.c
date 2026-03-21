@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "../include/file_data.h"
+#include "file_data.h"
 
 file_data *file_data_create(const char *path, const char *hash) {
     file_data *file = malloc(sizeof(file_data));

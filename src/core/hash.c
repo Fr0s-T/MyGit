@@ -3,7 +3,7 @@
 #include <string.h>
 #include <openssl/evp.h>
 
-#include "../include/hash.h"
+#include "hash.h"
 
 enum e_hash_constants {
     HASH_READ_BUFFER_SIZE = 4096,
