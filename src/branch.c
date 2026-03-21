@@ -7,31 +7,96 @@
 #include "../include/colors.h"
 #include "../include/helpers/file_io.h"
 
-static int input_check(int argc, char **argv);
+static int input_check(int argc, char **argv, char *b_name);
 static int branch_list(void);
+static int load_branch_names(char ***names_out, int *count_out);
 static const char *extract_branch_name(const char *head_ref);
 static int should_skip_branch_entry(const char *name);
 static void destroy_branch_names(char **names, int count);
+static int create_branch(char *name);
 
 int branch(int argc, char **argv) {
-    if (input_check(argc, argv) != 0) {
+    char name[17];
+    int input_status;
+
+    input_status = input_check(argc, argv, name);
+    if (input_status == -1) {
         return (-1);
     }
-    return (branch_list());
+
+    if (input_status == 1) {
+        return branch_list();
+    }
+    
+    if (input_status == 2) {
+        return create_branch(name);
+    }
+
+    return (0);
 }
+
+static int create_branch(char *name) {
+    char *current_branch;
+    char *new_branch_path;
+    char **names;
+    int count;
+    int stat;
+
+    stat = -1;
+    current_branch = NULL;
+    new_branch_path = NULL;
+    names = NULL;
+    count = 0;
+
+    if (load_branch_names(&names, &count) != 0) {
+        return (-1);
+    }
+
+    for (int i = 0; i < count; i++) {
+        if (strcmp(names[i], name) == 0) {
+            printf("[branch] branch '%s' already exists\n", name);
+            goto cleanup;
+        }
+    }
+
+    if (file_io_read_first_line(".mygit/HEAD", &current_branch) != 0) {
+        goto cleanup;
+    }
+
+    new_branch_path = malloc(strlen(".mygit/refs/heads/") + strlen(name) + 1);
+    if (new_branch_path == NULL) {
+        goto cleanup;
+    }
+
+    sprintf(new_branch_path, ".mygit/refs/heads/%s", name);
+
+    if (file_io_copy_file(current_branch, new_branch_path) != 0) {
+        printf("[Branch/Create] failed to create branch\n");
+        goto cleanup;
+    }
+
+    if (strcmp(name, "does_it_work") == 0) {
+        printf("[branch] created '%s'\nyes it does.\n", name);
+    }
+    stat = 0;
+
+cleanup:
+    free(current_branch);
+    free(new_branch_path);
+    destroy_branch_names(names, count);
+    return (stat);
+}
+
 
 static int branch_list(void) {
     char *current_branch;
     const char *current_branch_name;
     char **names;
-    struct dirent *entry;
-    DIR *dir;
     int count;
     int status;
 
     current_branch = NULL;
     names = NULL;
-    dir = NULL;
     count = 0;
     status = -1;
 
@@ -40,35 +105,9 @@ static int branch_list(void) {
     }
 
     current_branch_name = extract_branch_name(current_branch);
-    
-    dir = opendir(".mygit/refs/heads");
-    if (dir == NULL) {
+
+    if (load_branch_names(&names, &count) != 0) {
         goto cleanup;
-    }
-
-    names = malloc(sizeof(char *));
-    if (names == NULL) {
-        goto cleanup;
-    }
-
-    while ((entry = readdir(dir)) != NULL) {
-
-        if (should_skip_branch_entry(entry->d_name)) {
-            continue;
-        }
-
-        names[count] = malloc(strlen(entry->d_name) + 1);
-        if (names[count] == NULL) {
-            goto cleanup;
-        }
-
-        strcpy(names[count], entry->d_name);
-        count++;
-        names = realloc(names, (count + 1) * sizeof(char *));
-
-        if (names == NULL) {
-            goto cleanup;
-        }
     }
 
     if (current_branch_name != NULL) {
@@ -87,12 +126,53 @@ static int branch_list(void) {
     status = 0;
 
 cleanup:
-    if (dir != NULL) {
-        closedir(dir);
-    }
     free(current_branch);
     destroy_branch_names(names, count);
     return (status);
+}
+
+static int load_branch_names(char ***names_out, int *count_out) {
+    char **names;
+    char **new_names;
+    struct dirent *entry;
+    DIR *dir;
+    int count;
+
+    if (names_out == NULL || count_out == NULL) {
+        return (-1);
+    }
+    *names_out = NULL;
+    *count_out = 0;
+    dir = opendir(".mygit/refs/heads");
+    if (dir == NULL) {
+        return (-1);
+    }
+    names = NULL;
+    count = 0;
+    while ((entry = readdir(dir)) != NULL) {
+        if (should_skip_branch_entry(entry->d_name)) {
+            continue;
+        }
+        new_names = realloc(names, (count + 1) * sizeof(char *));
+        if (new_names == NULL) {
+            closedir(dir);
+            destroy_branch_names(names, count);
+            return (-1);
+        }
+        names = new_names;
+        names[count] = malloc(strlen(entry->d_name) + 1);
+        if (names[count] == NULL) {
+            closedir(dir);
+            destroy_branch_names(names, count);
+            return (-1);
+        }
+        strcpy(names[count], entry->d_name);
+        count++;
+    }
+    closedir(dir);
+    *names_out = names;
+    *count_out = count;
+    return (0);
 }
 
 static const char *extract_branch_name(const char *head_ref) {
@@ -128,11 +208,26 @@ static void destroy_branch_names(char **names, int count) {
     free(names);
 }
 
-static int input_check(int argc, char **argv) {
-    (void)argv;
-    if (argc != 2) {
-        printf("[branch] usage: mygit branch\n");
+static int input_check(int argc, char **argv, char *b_name) {
+    if (argc < 2) {
+        printf("[branch] usage: mygit branch\n\tmygit branch branch_name to create a branch\n");
         return (-1);
     }
-    return (0);
+    if (strcmp(argv[1], "branch") != 0) {
+        return -1;
+    }
+    if (argc == 2) {
+        return (1);
+    }
+    if (argc == 3) {
+        if (strlen(argv[2]) > 16) {
+            printf("[branch] Max allowed len for a branch name is 16 char\n");
+            return (-1);
+        }
+        strcpy(b_name, argv[2]);
+        return (2);
+    }
+
+    printf("[branch] usage: mygit branch\n\tmygit branch branch_name to create a branch\n");
+    return (-1);
 }
