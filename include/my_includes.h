@@ -12,9 +12,11 @@
 #include <linux/limits.h>
 #include <dirent.h>
 #include <openssl/sha.h>
+#include <dirent.h>
 
 #include "../include/colors.h"
 #include "../include/init.h"
+#include "../include/branch.h"
 #include "../include/log.h"
 #include "../include/services.h"
 #include "../include/add.h"
@@ -24,5 +26,6 @@
 #include "../include/add_creating_blob_and_indexing.h"
 #include "../include/node.h"
 #include "../include/commit.h"
+#include "../include/helpers/file_io.h"
 
 #endif

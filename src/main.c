@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "../include/add.h"
+#include "../include/branch.h"
 #include "../include/commit.h"
 #include "../include/init.h"
 #include "../include/log.h"
@@ -36,6 +37,9 @@ int router(int argc, char **argv) {
     }
     else if (strcmp(argv[1], "log") == 0) {
         return log_cmd(argc, argv);
+    }
+    else if (strcmp(argv[1], "branch") == 0) {
+        return branch(argc, argv);
     }
     return -1;
 }
