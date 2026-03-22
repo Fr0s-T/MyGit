@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <linux/limits.h>
 
+#include "colors.h"
 #include "node.h"
 
 enum e_node_constants {
@@ -115,21 +117,21 @@ static void print_tree_recursive(node *root, int depth, int *branch_state,
     if (depth > 0) {
         for (int i = 0; i < depth - 1; i++) {
             if (branch_state[i] != 0) {
-                printf("|   ");
+                printf(C_CYAN "|   " C_RESET);
             }
             else {
                 printf("    ");
             }
         }
         if (is_last_child != 0) {
-            printf("`-- ");
+            printf(C_CYAN "`-- " C_RESET);
         }
         else {
-            printf("|-- ");
+            printf(C_CYAN "|-- " C_RESET);
         }
     }
     print_tree_label(root);
-    printf("\n");
+    printf("\n\n");
     branch_state[depth] = (is_last_child == 0);
     for (int i = 0; i < root->children_count; i++) {
         print_tree_recursive(root->children[i], depth + 1, branch_state,
@@ -139,16 +141,21 @@ static void print_tree_recursive(node *root, int depth, int *branch_state,
 
 static void print_tree_label(node *root) {
     if (root->name == NULL) {
-        printf("(null)");
+        printf(C_YELLOW "(null)" C_RESET);
     }
     else if (root->name[0] == '\0') {
-        printf("(root)");
+        printf(C_BOLD C_BLUE "(root)" C_RESET);
     }
     else {
-        printf("%s", root->name);
+        if (root->type == NODE_DIR || root->type == NODE_ROOT) {
+            printf(C_BLUE "%s" C_RESET, root->name);
+        }
+        else {
+            printf(C_GREEN "%s" C_RESET, root->name);
+        }
     }
     if (root->hash != NULL) {
-        printf(" [%s]", root->hash);
+        printf(C_YELLOW " [%s]" C_RESET, root->hash);
     }
 }
 
@@ -190,5 +197,49 @@ int node_add_child(node *parent, node *child) {
     parent->children[parent->children_count] = child;
     parent->children_count++;
     child->parent = parent;
+    return (0);
+}
+
+int get_nodes_path(node *child, char **node_path) {
+    char *new_path;
+    size_t current_len;
+    size_t child_len;
+    size_t needed;
+
+    if (child == NULL || node_path == NULL) {
+        return (-1);
+    }
+    if (child->type == NODE_ROOT) {
+        *node_path = malloc(1);
+        if (*node_path == NULL) {
+            return (-1);
+        }
+        (*node_path)[0] = '\0';
+        return (0);
+    }
+    if (get_nodes_path(child->parent, node_path) != 0) {
+        return (-1);
+    }
+    if (*node_path == NULL || child->name == NULL) {
+        free(*node_path);
+        *node_path = NULL;
+        return (-1);
+    }
+    current_len = strlen(*node_path);
+    child_len = strlen(child->name);
+    needed = current_len + child_len + (current_len > 0 ? 1 : 0) + 1;
+    new_path = realloc(*node_path, needed);
+    if (new_path == NULL) {
+        free(*node_path);
+        *node_path = NULL;
+        return (-1);
+    }
+    *node_path = new_path;
+    if (current_len > 0) {
+        snprintf(*node_path + current_len, needed - current_len, "/%s", child->name);
+    }
+    else {
+        snprintf(*node_path, needed, "%s", child->name);
+    }
     return (0);
 }

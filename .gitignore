@@ -2,6 +2,7 @@
 .vscode/
 .idea/
 out/
+CHECKOUT_METRICS.md
 *.o
 *.log
 *.tmp

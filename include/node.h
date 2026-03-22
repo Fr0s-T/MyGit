@@ -27,4 +27,21 @@ node *find_child(node *current_node, char *child_name);
 void print_tree(node *root, int depth);
 int node_add_child(node *parent, node *child);
 
+/*
+** Builds the repo-relative path for a node by walking up through its parents.
+**
+** Examples:
+** - root child "src" -> "src"
+** - nested file under src -> "src/main.c"
+**
+** Returns:
+**  0  on success
+** -1  on allocation or invalid-input failure
+**
+** Ownership:
+** - allocates *node_path on success
+** - caller must free(*node_path)
+*/
+int get_nodes_path(node *child, char **node_path);
+
 #endif
