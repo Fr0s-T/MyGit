@@ -9,6 +9,7 @@
 #include "add_creating_blob_and_indexing.h"
 
 static int input_check(int argc, char **argv);
+static int repo_is_initialized(void);
 
 int add(int argc, char **argv) {
     char cwd[PATH_MAX];
@@ -17,6 +18,11 @@ int add(int argc, char **argv) {
     int status;
 
     if (input_check(argc, argv) == -1) {
+        return -1;
+    }
+    if (repo_is_initialized() == 0) {
+        printf("[add] repository is not initialized\n");
+        printf("[add] call `mygit init` first\n");
         return -1;
     }
 
@@ -63,4 +69,23 @@ static int input_check(int argc, char **argv) {
 
     printf("\nNot supported or wrong arg\n");
     return -1;
+}
+
+static int repo_is_initialized(void) {
+    if (access(".mygit", F_OK) != 0) {
+        return (0);
+    }
+    if (access(".mygit/index", F_OK) != 0) {
+        return (0);
+    }
+    if (access(".mygit/HEAD", F_OK) != 0) {
+        return (0);
+    }
+    if (access(".mygit/objects", F_OK) != 0) {
+        return (0);
+    }
+    if (access(".mygit/refs/heads", F_OK) != 0) {
+        return (0);
+    }
+    return (1);
 }

@@ -11,6 +11,7 @@
 ** - entry_count: number of collected entries
 **
 ** Caller owns the returned array and entries.
+** Use checkout_destroy_entries() to free the result.
 */
 int checkout_collect_current_tracked_entries(checkout_entry ***current_entries,
     int *entry_count);

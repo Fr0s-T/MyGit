@@ -1,240 +1,231 @@
 # MyGit
 
-A small learning-oriented version control system written in C.
+A small Git-like version control project written in C, built to make the core ideas feel visible instead of magical.
 
-## Overview
+## What This Is
 
-`MyGit` is a local educational project built to explore the core ideas behind version control systems by implementing a compact subset of Git-like behavior from scratch.
+MyGit is a learning-oriented local VCS.
 
-The project is not trying to replace Git. The goal is to understand the moving parts:
+It is not trying to compete with Git.
+It is trying to make the moving parts easier to see:
 
-- repository initialization
 - staging through an index
 - blob storage
 - tree construction
-- commit creation
-- branch reference updates
+- commit objects
+- branch refs
+- checkout-style state transitions
+- merge as snapshot logic
 
-## Problem Statement
+If Git sometimes feels like a black box, this project is the opposite spirit.
+The box is open.
 
-Modern version control tools are extremely powerful, but that power can hide the underlying model. This project exists to make the internals visible and concrete.
+## Why This Exists
 
-Instead of treating version control as a black box, `MyGit` exposes the core object flow directly:
+Modern version control tools are powerful, but that power can hide the underlying model.
 
-1. files are hashed into blob objects
-2. directories are assembled into tree objects
-3. commits point to a root tree
-4. branch files point to the latest commit
+This project exists to answer questions like:
 
-That makes the architecture easier to study and reason about.
+- What does a branch really need to be?
+- What does the index actually do?
+- How does a commit become a tree plus metadata?
+- What has to happen before checkout or reset is safe?
+- How can merge work without starting from line-by-line diff magic?
 
-## Project Goals
+The idea is simple:
+build a smaller system, keep the representation readable, and learn by tracing the real code.
 
-- build a minimal but working local version control tool
-- learn how object stores and refs work
-- keep the implementation readable
-- prefer clarity over perfect Git compatibility
+## Who This Is For
 
-## Non-Goals
+This repo is a good fit if you are:
+
+- learning C and want a project with real structure
+- learning version control internals
+- curious about how Git-like tools are modeled under the hood
+- building your own toy VCS and want reference ideas
+- trying to connect high-level VCS concepts to concrete code
+
+This repo is probably not for you if you want:
 
 - full Git compatibility
-- production-grade safety for every edge case
-- large-scale performance optimization
-- complete feature parity with Git
+- production-grade performance
+- a polished end-user replacement for Git
 
-## Current Features
+## Project Spirit
 
-### `init`
+The project tries to stay light:
 
-Creates:
+- small enough to hold in your head
+- serious enough to teach real architectural ideas
+- simple enough that the storage model is inspectable by hand
 
-- `.mygit/`
-- `.mygit/objects/`
-- `.mygit/refs/`
-- `.mygit/refs/heads/`
-- `.mygit/refs/heads/main`
-- `.mygit/index`
-- `.mygit/HEAD`
+That means the code usually prefers:
 
-`HEAD` stores a plain-text reference to:
+- clarity over feature count
+- readable object formats over compact ones
+- explicit state transitions over hidden abstractions
 
-```text
-.mygit/refs/heads/main
-```
+## Current Commands
 
-### `add .`
+MyGit currently includes:
 
-- walks the working tree
-- ignores internal directories such as `.mygit`, `.git`, `out`, and `.vscode`
-- hashes regular files
-- compares each file hash against the current index
-- stages only changed or new files
-- prints how many files were actually added
-- prints `nothing changed` if there is nothing to stage
+- `-help` / `--help`
+- `init`
+- `add .`
+- `commit -m "message"`
+- `log`
+- `branch`
+- `checkout`
+- `reset`
+- `merge`
 
-### `commit -m "message"`
+The implementation is intentionally narrower than Git, but the core ideas are there.
 
-- reads the index
-- rebuilds an in-memory tree
-- writes tree objects into `.mygit/objects`
-- compares the new root tree hash to the previous commit
-- aborts cleanly if nothing changed
-- writes a commit object
-- updates the current branch ref
+## Install / Build
 
-## Repository Structure
+There is no installer yet.
+You build it from source.
 
-```text
-.
-├── data_struct/
-│   ├── file_data.c
-│   └── node.c
-├── include/
-│   ├── helpers/
-│   ├── add.h
-│   ├── add_creating_blob_and_indexing.h
-│   ├── add_traversal.h
-│   ├── colors.h
-│   ├── commit.h
-│   ├── file_data.h
-│   ├── hash.h
-│   ├── init.h
-│   ├── my_includes.h
-│   ├── node.h
-│   └── services.h
-├── src/
-│   ├── helpers/
-│   ├── add.c
-│   ├── add_creating_blob_and_indexing.c
-│   ├── add_traversal.c
-│   ├── commit.c
-│   ├── hash.c
-│   ├── init.c
-│   ├── main.c
-│   └── services.c
-└── .mygit/
-```
+### Requirements
 
-## Design Choices
+- `gcc`
+- `make`
+- OpenSSL `libcrypto` available for linking
 
-### Split Commit Responsibilities
-
-The commit path was separated into smaller modules:
-
-- `src/commit.c`
-  - command-level orchestration
-- `src/helpers/commit_tree.c`
-  - index parsing
-  - tree reconstruction
-  - tree object writing
-- `src/helpers/commit_object.c`
-  - HEAD/ref resolution
-  - previous commit comparison
-  - commit object creation
-  - branch update
-
-This keeps the top-level command easier to read and makes each file more focused.
-
-### Decoupled Headers
-
-Source files now include more specific headers instead of relying entirely on the umbrella header. That reduces hidden dependencies and makes each file’s needs clearer.
-
-`my_includes.h` is still kept in the project as a convenience umbrella for future work.
-
-### Simple Object Formats
-
-Object formats are intentionally human-readable.
-
-Tree objects use lines like:
-
-```text
-blob Makefile 3a26cc204ebc57520db5ae7efed82d7367295c5d
-tree src 5750f49efa6c138b522adb27495af5dd1150f6c9
-```
-
-Commit objects use:
-
-```text
-tree <root-tree-hash>
-branch <branch-name>
-time <unix-timestamp>
-parent <parent-hash-or-NULL>
-
-<commit-message>
-```
-
-This is easier to inspect during development than a more compact binary or Git-compatible format.
-
-### Local Scope First
-
-The project is designed for local learning and experimentation. That allows some tradeoffs:
-
-- simpler reference format
-- lighter validation
-- less concern for scaling
-- focus on working behavior over strict compatibility
-
-## How Staging Works
-
-The index stores entries like:
-
-```text
-path/to/file<TAB>sha1hash
-```
-
-When `add .` runs:
-
-1. the working tree is traversed
-2. each file is hashed
-3. the current index is checked for an existing hash
-4. unchanged files are skipped
-5. changed files are written as blobs and refreshed in the index
-
-This prevents `add .` from reporting success on unchanged files.
-
-## Safety Notes
-
-The implementation now avoids a risky index replacement pattern. The index is rewritten through a temp file and then swapped into place without deleting the old index first.
-
-For the scope of this project, that is a good balance between simplicity and safety.
-
-## Build
+### Build
 
 ```bash
 make
 ```
 
-Output:
+This produces:
 
 ```text
 out/MyGit.out
 ```
 
-## Example Usage
+### Clean build artifacts
 
 ```bash
+make clean
+make fclean
+```
+
+## Quick Start
+
+```bash
+./out/MyGit.out --help
 ./out/MyGit.out init
 ./out/MyGit.out add .
 ./out/MyGit.out commit -m "first commit"
+./out/MyGit.out log
 ```
 
-## What Is Still Missing
+If you want a quick built-in command guide at any time:
 
-Reasonable future additions:
+```bash
+./out/MyGit.out -help
+```
 
-- a `log` command
-- deletion tracking
-- checkout-like behavior
-- better malformed-object handling
+## What The Repo Model Looks Like
 
-## Why This Project Is Useful
+After `init`, MyGit creates:
 
-This codebase helps connect high-level version control concepts to concrete implementation details:
+- `.mygit/objects/`
+- `.mygit/refs/heads/`
+- `.mygit/index`
+- `.mygit/HEAD`
 
-- hashing
-- object storage
-- tree construction
-- refs
-- commit chaining
+The important idea is that the storage model is intentionally plain:
 
-For a learning project, that is the main success criterion, and the project is already delivering on it.
+- the index is a flat staged snapshot
+- objects live in `.mygit/objects`
+- branches are plain text ref files
+- `HEAD` points to the current branch ref path
+
+That simplicity is a feature of the project.
+
+## How To Read This Repo
+
+There are two good ways to use this codebase.
+
+### 1. Use it like a small project
+
+Build it, run commands, inspect `.mygit/`, and trace the state changes.
+
+### 2. Use it like a guided systems-study repo
+
+Read the docs in `docs/` alongside the code.
+That is the best route if your goal is understanding architecture and logic rather than just compiling it once.
+
+## Guide Map
+
+The docs folder contains focused guided explanations:
+
+- [init-explained.md](docs/init-explained.md)
+- [add-explained.md](docs/add-explained.md)
+- [commit-explained.md](docs/commit-explained.md)
+- [branch-explained.md](docs/branch-explained.md)
+- [checkout-explained.md](docs/checkout-explained.md)
+- [reset-explained.md](docs/reset-explained.md)
+- [merge-explained.md](docs/merge-explained.md)
+- [log-explained.md](docs/log-explained.md)
+- [custom-data-structures-explained.md](docs/custom-data-structures-explained.md)
+- [system-architecture-explained.md](docs/system-architecture-explained.md)
+
+## How To Use The Guides
+
+If you want the smoothest reading path:
+
+1. Start with [system-architecture-explained.md](docs/system-architecture-explained.md) for the big picture.
+2. Read [custom-data-structures-explained.md](docs/custom-data-structures-explained.md) so `node`, `file_data`, and `checkout_entry` feel familiar.
+3. Then follow the command flow:
+   `init` -> `add` -> `commit` -> `branch` -> `checkout` -> `reset` -> `merge` -> `log`
+
+If you prefer learning by feature, just open the guide for the command you are currently reading in `src/`.
+
+## What This Project Optimizes For
+
+MyGit is optimized for:
+
+- understanding
+- inspectability
+- architectural clarity
+- concrete practice with C code organization
+
+It is not optimized for:
+
+- Git parity
+- huge repositories
+- advanced merge behavior
+- every possible edge case
+
+## A Good Way To Explore
+
+One nice way to use the repo is:
+
+1. run a command
+2. inspect `.mygit/`
+3. read the matching guide
+4. trace the source files behind it
+
+That loop tends to make the architecture click pretty quickly.
+
+## Repository Layout
+
+At a high level:
+
+- `src/commands/` holds top-level command orchestration
+- `src/add/` holds staging logic
+- `src/checkout/` holds tracked-state reconstruction and apply logic
+- `src/merge/` holds merge setup and merge decision logic
+- `src/helpers/` holds commit/tree/file helpers
+- `src/core/` holds lower-level utilities like hashing, paths, and ignore logic
+- `src/data_structures/` holds the project-specific in-memory models
+- `docs/` holds the guided explanations
+
+## Final Note
+
+This is a repo for people who like seeing how things work.
+
+If you want a compact project where refs are real files, objects are readable, and the architecture is small enough to study without getting lost, that is exactly what MyGit is trying to be.

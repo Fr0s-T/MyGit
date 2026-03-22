@@ -7,10 +7,15 @@
 #define COMMIT_NOTHING_TO_DO 1
 
 typedef struct s_commit_object_info {
+    /* Heap string with the commit's root tree hash. */
     char *tree_hash;
+    /* Heap string with the branch name stored in the commit payload. */
     char *branch_name;
+    /* Heap string with the timestamp field as stored on disk. */
     char *time_value;
+    /* Heap array of parent hashes, each string owned by the struct. */
     char **parent_hashes;
+    /* Number of entries in parent_hashes. */
     int parent_count;
 } commit_object_info;
 
@@ -23,6 +28,10 @@ typedef struct s_commit_object_info {
 **
 ** Output on success:
 ** - out: receives the new commit hash
+**
+** Ownership:
+** - borrows root and commit_msg
+** - writes into caller-provided out buffer
 */
 int accept_commit(node *root, const char *commit_msg,
     char out[SHA1_HEX_BUFFER_SIZE]);
@@ -34,6 +43,10 @@ int accept_commit(node *root, const char *commit_msg,
 ** - used for merge-style commits that need more than one parent
 ** - unlike accept_commit(), this does not abort just because the tree hash
 **   matches the current branch tip
+**
+** Ownership:
+** - borrows root, commit_msg, and parent_hashes
+** - does not take ownership of parent_hashes entries
 */
 int accept_commit_with_parents(node *root, const char *commit_msg,
     char **parent_hashes, int parent_count,
@@ -55,9 +68,16 @@ int read_commit_tree_hash(const char *commit_hash, char **tree_hash);
 /*
 ** Loads structured metadata from a commit object.
 **
+** Inputs:
+** - commit_hash: object name under `.mygit/objects`
+**
 ** Output on success:
-** - fills tree/branch/time
+** - fills tree_hash / branch_name / time_value
 ** - collects zero or more parent hashes
+**
+** Ownership:
+** - allocates all populated fields inside info
+** - caller must later call commit_object_destroy_info()
 */
 int commit_object_read_info(const char *commit_hash, commit_object_info *info);
 

@@ -66,12 +66,6 @@ int checkout(int argc, char **argv) {
         printf("[checkout] failed to read current tracked entries\n");
         goto cleanup;
     }
-    printf("[checkout] branch '%s' exists\n", branch_name);
-    printf("[checkout] repo is up to date with current branch\n");
-    printf("[checkout] target ref: %s\n", target_ref_path);
-    printf("[checkout] target commit: %s\n", target_commit_hash);
-    printf("[checkout] target root hash: %s\n", target_root_hash);
-    printf("[checkout] target root path: %s\n", target_root_path);
     root = node_create("", target_root_hash, NODE_ROOT, NULL);
     if (root == NULL) {
         printf("[checkout] failed to create root node\n");
@@ -84,19 +78,12 @@ int checkout(int argc, char **argv) {
             goto cleanup;
         }
     }
-    print_tree(root, 0);
-    checkout_print_entries("[checkout] current tracked entries:",
-        current_entries, current_entry_count);
-    checkout_print_entries("[checkout] target tracked entries:",
-        target_entries, target_entry_count);
     if (checkout_build_surviving_entries(&surviving_entries, target_entries,
             current_entries, target_entry_count, current_entry_count,
             &surviving_count) != 0) {
         printf("[checkout] failed to build surviving entries\n");
         goto cleanup;
     }
-    checkout_print_entries("[checkout] surviving tracked entries:",
-        surviving_entries, surviving_count);
     if (checkout_validate_entries_available(current_entries,
             current_entry_count) != 0) {
         printf("[checkout] current tracked objects are incomplete\n");
@@ -160,6 +147,7 @@ int checkout(int argc, char **argv) {
         }
         goto cleanup;
     }
+    printf("[checkout] switched to branch '%s'\n", branch_name);
     status = 0;
 
 cleanup:

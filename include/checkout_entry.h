@@ -2,8 +2,11 @@
 #define MYGIT_CHECKOUT_ENTRY_H
 
 typedef struct s_checkout_entry {
+    /* Repo-relative tracked path, owned by the struct. */
     char *relative_path;
+    /* Blob hash for the tracked file content, owned by the struct. */
     char *blob_hash;
+    /* Prebuilt `.mygit/objects/<hash>` path, owned by the struct. */
     char *object_path;
 } checkout_entry;
 
@@ -26,6 +29,10 @@ checkout_entry *checkout_entry_create(const char *relative_path,
 
 /*
 ** Replaces the blob hash on an existing entry and rebuilds object_path.
+**
+** Ownership:
+** - borrows blob_hash
+** - frees and replaces entry-owned blob_hash/object_path on success
 **
 ** Returns:
 **  0  on success
