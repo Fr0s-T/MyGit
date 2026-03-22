@@ -8,6 +8,7 @@ SRC = $(wildcard src/*.c) \
 	$(wildcard src/commands/*.c) \
 	$(wildcard src/add/*.c) \
 	$(wildcard src/checkout/*.c) \
+	$(wildcard src/merge/*.c) \
 	$(wildcard src/core/*.c) \
 	$(wildcard src/helpers/*.c) \
 	$(wildcard src/data_structures/*.c)

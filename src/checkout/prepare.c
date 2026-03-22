@@ -6,6 +6,7 @@
 static void destroy_checkout_entries(checkout_entry **entries, int count);
 static int checkout_all_tracked_files_exist(const char *cwd);
 static int checkout_has_modified_tracked_files(const char *cwd);
+static int checkout_index_has_tracked_entries(void);
 
 int checkout_input_check(int argc, char **argv, char **branch_name) {
     if (branch_name == NULL) {
@@ -83,7 +84,10 @@ int checkout_repo_is_up_to_date_with_branch(void) {
         goto cleanup;
     }
     if (head_commit_hash[0] == '\0') {
-        status = 0;
+        status = checkout_index_has_tracked_entries();
+        if (status > 0) {
+            status = -1;
+        }
         goto cleanup;
     }
     if (read_commit_tree_hash(head_commit_hash, &head_tree_hash) != 0) {
@@ -151,11 +155,8 @@ int checkout_read_target_commit(const char *branch_name,
 
 int checkout_read_target_root(const char *target_commit_hash,
     char **root_hash, char **root_path) {
-    char *commit_path;
     int needed;
-    int strip_status;
 
-    commit_path = NULL;
     if (target_commit_hash == NULL || root_hash == NULL || root_path == NULL) {
         return (-1);
     }
@@ -164,24 +165,7 @@ int checkout_read_target_root(const char *target_commit_hash,
     if (target_commit_hash[0] == '\0') {
         return (0);
     }
-    needed = snprintf(NULL, 0, ".mygit/objects/%s", target_commit_hash);
-    if (needed < 0) {
-        return (-1);
-    }
-    commit_path = malloc((size_t)needed + 1);
-    if (commit_path == NULL) {
-        return (-1);
-    }
-    snprintf(commit_path, (size_t)needed + 1, ".mygit/objects/%s", target_commit_hash);
-    if (file_io_read_first_line(commit_path, root_hash) != 0) {
-        free(commit_path);
-        return (-1);
-    }
-    free(commit_path);
-    strip_status = file_io_strip_substring(*root_hash, "tree ");
-    if (strip_status != 1) {
-        free(*root_hash);
-        *root_hash = NULL;
+    if (read_commit_tree_hash(target_commit_hash, root_hash) != 0) {
         return (-1);
     }
     needed = snprintf(NULL, 0, ".mygit/objects/%s", *root_hash);
@@ -295,5 +279,24 @@ static int checkout_has_modified_tracked_files(const char *cwd) {
 
 cleanup:
     add_destroy_file_list(changed_files, changed_count);
+    return (status);
+}
+
+static int checkout_index_has_tracked_entries(void) {
+    checkout_entry **current_entries;
+    int current_count;
+    int status;
+
+    current_entries = NULL;
+    current_count = 0;
+    status = -1;
+    if (checkout_collect_current_tracked_entries(&current_entries,
+            &current_count) != 0) {
+        goto cleanup;
+    }
+    status = (current_count > 0);
+
+cleanup:
+    destroy_checkout_entries(current_entries, current_count);
     return (status);
 }

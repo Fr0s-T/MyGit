@@ -7,6 +7,7 @@
 #include "commit.h"
 #include "init.h"
 #include "log.h"
+#include "merge.h"
 #include "reset.h"
 
 int router(int argc, char **argv);
@@ -39,6 +40,9 @@ int router(int argc, char **argv) {
     }
     else if (strcmp(argv[1], "log") == 0) {
         return log_cmd(argc, argv);
+    }
+    else if (strcmp(argv[1], "merge") == 0) {
+        return merge_cmd(argc, argv);
     }
     else if (strcmp(argv[1], "branch") == 0) {
         return branch(argc, argv);

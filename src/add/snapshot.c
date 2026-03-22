@@ -60,7 +60,13 @@ static int filter_unchanged_files(file_data **files, int *len_files, const char 
     char index_path[PATH_MAX];
     int write_index;
 
-    if (files == NULL || len_files == NULL || cwd == NULL) {
+    if (len_files == NULL || cwd == NULL || *len_files < 0) {
+        return (-1);
+    }
+    if (*len_files == 0) {
+        return (0);
+    }
+    if (files == NULL) {
         return (-1);
     }
     if (snprintf(index_path, sizeof(index_path), "%s/.mygit/index", cwd)

@@ -7,6 +7,13 @@ static int checkout_entry_is_surviving(checkout_entry *entry,
     checkout_entry **surviving_entries, int surviving_count);
 static int checkout_path_is_tracked(const char *relative_path,
     checkout_entry **entries, int count);
+static int checkout_path_has_tracked_descendant(const char *relative_path,
+    checkout_entry **entries, int count);
+static int checkout_directory_contains_only_tracked(const char *relative_path,
+    checkout_entry **entries, int count);
+static int checkout_directory_contains_only_tracked_recursive(
+    const char *relative_path, const char *full_path,
+    checkout_entry **entries, int count);
 static void remove_empty_parent_directories(const char *relative_path);
 static int ensure_parent_directories(const char *full_path);
 
@@ -272,28 +279,96 @@ int checkout_target_conflicts_with_untracked(checkout_entry **target_entries,
         return (-1);
     }
     for (int i = 0; i < target_count; i++) {
+        char *relative_copy;
+        char *cursor;
         char *full_path;
+        int tracked_ancestor_conflict;
+        struct stat path_stat;
 
         if (target_entries[i] == NULL || target_entries[i]->relative_path == NULL) {
             return (-1);
         }
-        if (checkout_path_is_tracked(target_entries[i]->relative_path,
-                current_entries, current_count) != 0) {
+        relative_copy = malloc(strlen(target_entries[i]->relative_path) + 1);
+        if (relative_copy == NULL) {
+            return (-1);
+        }
+        strcpy(relative_copy, target_entries[i]->relative_path);
+        cursor = relative_copy;
+        tracked_ancestor_conflict = 0;
+        while ((cursor = strchr(cursor, '/')) != NULL) {
+            char *ancestor_path;
+            struct stat ancestor_stat;
+
+            *cursor = '\0';
+            ancestor_path = generate_path(cwd, relative_copy);
+            *cursor = '/';
+            if (ancestor_path == NULL) {
+                free(relative_copy);
+                return (-1);
+            }
+            if (lstat(ancestor_path, &ancestor_stat) == 0) {
+                free(ancestor_path);
+                if (S_ISDIR(ancestor_stat.st_mode)) {
+                    cursor++;
+                    continue;
+                }
+                if (checkout_path_is_tracked(relative_copy,
+                        current_entries, current_count) != 0) {
+                    tracked_ancestor_conflict = 1;
+                    cursor++;
+                    continue;
+                }
+                free(relative_copy);
+                return (1);
+            }
+            free(ancestor_path);
+            if (errno != ENOENT) {
+                free(relative_copy);
+                return (-1);
+            }
+            cursor++;
+        }
+        if (tracked_ancestor_conflict != 0) {
+            free(relative_copy);
             continue;
         }
         full_path = generate_path(cwd, target_entries[i]->relative_path);
         if (full_path == NULL) {
+            free(relative_copy);
             return (-1);
         }
-        if (access(full_path, F_OK) == 0) {
+        if (lstat(full_path, &path_stat) == 0) {
             free(full_path);
+            if (S_ISDIR(path_stat.st_mode)) {
+                int tracked_only_status;
+
+                tracked_only_status = checkout_directory_contains_only_tracked(
+                    target_entries[i]->relative_path, current_entries,
+                    current_count);
+                free(relative_copy);
+                if (tracked_only_status < 0) {
+                    return (-1);
+                }
+                if (tracked_only_status == 0) {
+                    return (1);
+                }
+                continue;
+            }
+            if (checkout_path_is_tracked(target_entries[i]->relative_path,
+                    current_entries, current_count) != 0) {
+                free(relative_copy);
+                continue;
+            }
+            free(relative_copy);
             return (1);
         }
         if (errno != ENOENT) {
             free(full_path);
+            free(relative_copy);
             return (-1);
         }
         free(full_path);
+        free(relative_copy);
     }
     return (0);
 }
@@ -331,6 +406,120 @@ static int checkout_path_is_tracked(const char *relative_path,
         }
     }
     return (0);
+}
+
+static int checkout_path_has_tracked_descendant(const char *relative_path,
+    checkout_entry **entries, int count) {
+    size_t relative_len;
+
+    if (relative_path == NULL || count < 0) {
+        return (0);
+    }
+    if (count == 0 || entries == NULL) {
+        return (0);
+    }
+    relative_len = strlen(relative_path);
+    for (int i = 0; i < count; i++) {
+        if (entries[i] == NULL || entries[i]->relative_path == NULL) {
+            continue;
+        }
+        if (strncmp(entries[i]->relative_path, relative_path, relative_len) != 0) {
+            continue;
+        }
+        if (entries[i]->relative_path[relative_len] == '/') {
+            return (1);
+        }
+    }
+    return (0);
+}
+
+static int checkout_directory_contains_only_tracked(const char *relative_path,
+    checkout_entry **entries, int count) {
+    char cwd[PATH_MAX];
+    char *full_path;
+    int status;
+
+    if (relative_path == NULL) {
+        return (-1);
+    }
+    if (checkout_path_has_tracked_descendant(relative_path, entries, count) == 0) {
+        return (0);
+    }
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        return (-1);
+    }
+    full_path = generate_path(cwd, relative_path);
+    if (full_path == NULL) {
+        return (-1);
+    }
+    status = checkout_directory_contains_only_tracked_recursive(relative_path,
+        full_path, entries, count);
+    free(full_path);
+    return (status);
+}
+
+static int checkout_directory_contains_only_tracked_recursive(
+    const char *relative_path, const char *full_path,
+    checkout_entry **entries, int count) {
+    DIR *dir;
+    struct dirent *entry;
+    int status;
+
+    dir = opendir(full_path);
+    if (dir == NULL) {
+        return (-1);
+    }
+    status = 1;
+    while ((entry = readdir(dir)) != NULL) {
+        char *child_relative_path;
+        char *child_full_path;
+        struct stat child_stat;
+
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        child_relative_path = generate_path(relative_path, entry->d_name);
+        child_full_path = generate_path(full_path, entry->d_name);
+        if (child_relative_path == NULL || child_full_path == NULL) {
+            free(child_relative_path);
+            free(child_full_path);
+            status = -1;
+            break;
+        }
+        if (lstat(child_full_path, &child_stat) != 0) {
+            free(child_relative_path);
+            free(child_full_path);
+            status = -1;
+            break;
+        }
+        if (S_ISDIR(child_stat.st_mode)) {
+            if (checkout_path_has_tracked_descendant(child_relative_path,
+                    entries, count) == 0) {
+                free(child_relative_path);
+                free(child_full_path);
+                status = 0;
+                break;
+            }
+            status = checkout_directory_contains_only_tracked_recursive(
+                child_relative_path, child_full_path, entries, count);
+            free(child_relative_path);
+            free(child_full_path);
+            if (status != 1) {
+                break;
+            }
+            continue;
+        }
+        if (checkout_path_is_tracked(child_relative_path, entries, count) == 0) {
+            free(child_relative_path);
+            free(child_full_path);
+            status = 0;
+            break;
+        }
+        free(child_relative_path);
+        free(child_full_path);
+    }
+    closedir(dir);
+    return (status);
 }
 
 static void remove_empty_parent_directories(const char *relative_path) {

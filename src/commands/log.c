@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <linux/limits.h>
 
 #include "colors.h"
+#include "helpers/commit_object.h"
 #include "helpers/file_io.h"
 #include "log.h"
 
@@ -13,19 +13,9 @@
 #define LOG_VALUE_COLOR C_CYAN
 #define LOG_ERROR_COLOR C_RED
 
-typedef struct s_commit_info {
-    char *tree_hash;
-    char *branch_name;
-    char *time_value;
-    char *parent_hash;
-} commit_info;
-
 static char *duplicate_string(const char *value);
-static void trim_line_endings(char *value);
-static int load_commit_info(const char *commit_hash, commit_info *info);
-static void destroy_commit_info(commit_info *info);
-static void print_commit_log(const char *commit_hash, const commit_info *info);
-static int parse_prefixed_line(const char *line, const char *prefix, char **out);
+static void print_commit_log(const char *commit_hash,
+    const commit_object_info *info);
 
 int log_cmd(int argc, char **argv) {
     char *head_ref_path;
@@ -57,27 +47,33 @@ int log_cmd(int argc, char **argv) {
         status = 0;
         goto cleanup;
     }
-    while (current_commit_hash[0] != '\0' && strcmp(current_commit_hash, "NULL") != 0) {
-        commit_info info;
+    while (current_commit_hash[0] != '\0') {
+        commit_object_info info;
         char *next_commit_hash;
 
-        info.tree_hash = NULL;
-        info.branch_name = NULL;
-        info.time_value = NULL;
-        info.parent_hash = NULL;
         next_commit_hash = NULL;
-        if (load_commit_info(current_commit_hash, &info) == -1) {
-            destroy_commit_info(&info);
+        if (commit_object_read_info(current_commit_hash, &info) != 0) {
             goto cleanup;
         }
         print_commit_log(current_commit_hash, &info);
-        next_commit_hash = duplicate_string(info.parent_hash);
-        destroy_commit_info(&info);
+        if (info.parent_count > 0) {
+            next_commit_hash = duplicate_string(info.parent_hashes[0]);
+            if (next_commit_hash == NULL) {
+                commit_object_destroy_info(&info);
+                goto cleanup;
+            }
+        }
+        commit_object_destroy_info(&info);
+        free(current_commit_hash);
         if (next_commit_hash == NULL) {
+            current_commit_hash = duplicate_string("");
+        }
+        else {
+            current_commit_hash = next_commit_hash;
+        }
+        if (current_commit_hash == NULL) {
             goto cleanup;
         }
-        free(current_commit_hash);
-        current_commit_hash = next_commit_hash;
     }
     status = 0;
 
@@ -101,69 +97,8 @@ static char *duplicate_string(const char *value) {
     return (copy);
 }
 
-static void trim_line_endings(char *value) {
-    size_t len;
-
-    if (value == NULL) {
-        return ;
-    }
-    len = strlen(value);
-    while (len > 0 && (value[len - 1] == '\n' || value[len - 1] == '\r')) {
-        value[len - 1] = '\0';
-        len--;
-    }
-}
-
-static int load_commit_info(const char *commit_hash, commit_info *info) {
-    char object_path[PATH_MAX];
-    FILE *file;
-    char line[PATH_MAX];
-
-    if (commit_hash == NULL || info == NULL) {
-        return (-1);
-    }
-    if (snprintf(object_path, sizeof(object_path), ".mygit/objects/%s", commit_hash) >= (int)sizeof(object_path)) {
-        return (-1);
-    }
-    file = fopen(object_path, "r");
-    if (file == NULL) {
-        return (-1);
-    }
-    if (fgets(line, sizeof(line), file) == NULL || parse_prefixed_line(line, "tree ", &info->tree_hash) == -1) {
-        fclose(file);
-        destroy_commit_info(info);
-        return (-1);
-    }
-    if (fgets(line, sizeof(line), file) == NULL || parse_prefixed_line(line, "branch ", &info->branch_name) == -1) {
-        fclose(file);
-        destroy_commit_info(info);
-        return (-1);
-    }
-    if (fgets(line, sizeof(line), file) == NULL || parse_prefixed_line(line, "time ", &info->time_value) == -1) {
-        fclose(file);
-        destroy_commit_info(info);
-        return (-1);
-    }
-    if (fgets(line, sizeof(line), file) == NULL || parse_prefixed_line(line, "parent ", &info->parent_hash) == -1) {
-        fclose(file);
-        destroy_commit_info(info);
-        return (-1);
-    }
-    fclose(file);
-    return (0);
-}
-
-static void destroy_commit_info(commit_info *info) {
-    if (info == NULL) {
-        return ;
-    }
-    free(info->tree_hash);
-    free(info->branch_name);
-    free(info->time_value);
-    free(info->parent_hash);
-}
-
-static void print_commit_log(const char *commit_hash, const commit_info *info) {
+static void print_commit_log(const char *commit_hash,
+    const commit_object_info *info) {
     time_t raw_time;
     struct tm *time_info;
     char formatted_time[64];
@@ -185,22 +120,4 @@ static void print_commit_log(const char *commit_hash, const commit_info *info) {
     printf(LOG_TAG_COLOR "[log]" C_RESET " "
         LOG_LABEL_COLOR "branch: " LOG_VALUE_COLOR "%s\n\n" C_RESET,
         info->branch_name);
-}
-
-static int parse_prefixed_line(const char *line, const char *prefix, char **out) {
-    const char *value;
-
-    if (line == NULL || prefix == NULL || out == NULL) {
-        return (-1);
-    }
-    if (strncmp(line, prefix, strlen(prefix)) != 0) {
-        return (-1);
-    }
-    value = line + strlen(prefix);
-    *out = duplicate_string(value);
-    if (*out == NULL) {
-        return (-1);
-    }
-    trim_line_endings(*out);
-    return (0);
 }
