@@ -15,13 +15,14 @@ enum e_traversal_constants {
 
 static int should_skip_entry(const char *entry_name);
 static int process_directory_entry(const char *parent_dir_path, struct dirent *entry,
-    file_data ***files, int *len_files, char *cwd);
+    file_data ***files, int *len_files, char *cwd, const gitignore *ignore);
 static int resolve_entry_path(const char *parent_dir_path, const char *entry_name,
     char **entry_path, char **resolved_path);
 static int get_entry_stat(const char *path, struct stat *entry_stat);
 static int append_file_data(file_data ***files, int *len_files, char *resolved_path, char *cwd);
 
-int traverse_directory(const char *directory_path, file_data ***files, int *len_files, char *cwd) {
+int traverse_directory(const char *directory_path, file_data ***files,
+    int *len_files, char *cwd, const gitignore *ignore) {
     DIR *current_dir;
     struct dirent *entry;
 
@@ -36,7 +37,8 @@ int traverse_directory(const char *directory_path, file_data ***files, int *len_
             continue;
         }
 
-        if (process_directory_entry(directory_path, entry, files, len_files, cwd) == -1) {
+        if (process_directory_entry(directory_path, entry, files, len_files,
+                cwd, ignore) == -1) {
             closedir(current_dir);
             return -1;
         }
@@ -119,10 +121,12 @@ static int append_file_data(file_data ***files, int *len_files, char *resolved_p
 }
 
 static int process_directory_entry(const char *parent_dir_path, struct dirent *entry,
-    file_data ***files, int *len_files, char *cwd) {
+    file_data ***files, int *len_files, char *cwd, const gitignore *ignore) {
     char *entry_path = NULL;
     char *resolved_path = NULL;
+    char *relative_path = NULL;
     struct stat entry_stat;
+    int is_dir;
 
     if (resolve_entry_path(parent_dir_path, entry->d_name, &entry_path, &resolved_path) == -1) {
         return -1;
@@ -134,8 +138,22 @@ static int process_directory_entry(const char *parent_dir_path, struct dirent *e
         return -1;
     }
 
-    if (S_ISDIR(entry_stat.st_mode)) {
-        if (traverse_directory(resolved_path, files, len_files, cwd) == -1) {
+    is_dir = S_ISDIR(entry_stat.st_mode);
+    relative_path = normalize_path(resolved_path, cwd);
+    if (relative_path == NULL) {
+        free(entry_path);
+        free(resolved_path);
+        return -1;
+    }
+    if (gitignore_should_skip(ignore, relative_path, entry->d_name, is_dir) != 0) {
+        free(relative_path);
+        free(entry_path);
+        free(resolved_path);
+        return 0;
+    }
+    if (is_dir) {
+        if (traverse_directory(resolved_path, files, len_files, cwd, ignore) == -1) {
+            free(relative_path);
             free(entry_path);
             free(resolved_path);
             return -1;
@@ -143,12 +161,14 @@ static int process_directory_entry(const char *parent_dir_path, struct dirent *e
     }
     else if (S_ISREG(entry_stat.st_mode)) {
         if (append_file_data(files, len_files, resolved_path, cwd) == -1) {
+            free(relative_path);
             free(entry_path);
             free(resolved_path);
             return -1;
         }
     }
 
+    free(relative_path);
     free(entry_path);
     free(resolved_path);
     return 0;

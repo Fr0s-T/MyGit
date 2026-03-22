@@ -2,7 +2,9 @@
 #define MYGIT_ADD_TRAVERSAL_H
 
 #include "file_data.h"
+#include "gitignore.h"
 
-int traverse_directory(const char *directory_path, file_data ***files, int *len_files, char *cwd);
+int traverse_directory(const char *directory_path, file_data ***files,
+    int *len_files, char *cwd, const gitignore *ignore);
 
 #endif

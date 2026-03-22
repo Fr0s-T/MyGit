@@ -26,6 +26,7 @@
 #include "add_snapshot.h"
 #include "checkout_entry.h"
 #include "file_data.h"
+#include "gitignore.h"
 #include "add_traversal.h"
 #include "hash.h"
 #include "add_creating_blob_and_indexing.h"

@@ -7,6 +7,7 @@
 #include "commit.h"
 #include "init.h"
 #include "log.h"
+#include "reset.h"
 
 int router(int argc, char **argv);
 
@@ -44,6 +45,9 @@ int router(int argc, char **argv) {
     }
     else if (strcmp(argv[1], "checkout") == 0) {
         return checkout(argc, argv);
+    }
+    else if (strcmp(argv[1], "reset") == 0) {
+        return reset_cmd(argc, argv);
     }
     return -1;
 }

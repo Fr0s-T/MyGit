@@ -8,10 +8,12 @@
 #include "helpers/file_io.h"
 
 static int input_check(int argc, char **argv, char *b_name);
+static void print_branch_usage(void);
 static int branch_list(void);
 static const char *extract_branch_name(const char *head_ref);
 static int should_skip_branch_entry(const char *name);
 static int create_branch(char *name);
+static int delete_branch(char *name);
 
 int branch(int argc, char **argv) {
     char name[17];
@@ -28,6 +30,9 @@ int branch(int argc, char **argv) {
     
     if (input_status == 2) {
         return create_branch(name);
+    }
+    if (input_status == 3) {
+        return delete_branch(name);
     }
 
     return (0);
@@ -83,6 +88,63 @@ cleanup:
     free(new_branch_path);
     branch_destroy_names(names, count);
     return (stat);
+}
+
+static int delete_branch(char *name) {
+    char *current_branch;
+    const char *current_branch_name;
+    char *branch_path;
+    char **names;
+    int count;
+    int exists;
+    int status;
+
+    current_branch = NULL;
+    current_branch_name = NULL;
+    branch_path = NULL;
+    names = NULL;
+    count = 0;
+    exists = 0;
+    status = -1;
+
+    if (branch_load_names(&names, &count) != 0) {
+        return (-1);
+    }
+    for (int i = 0; i < count; i++) {
+        if (strcmp(names[i], name) == 0) {
+            exists = 1;
+            break;
+        }
+    }
+    if (exists == 0) {
+        printf("[branch] branch '%s' does not exist\n", name);
+        goto cleanup;
+    }
+    if (file_io_read_first_line(".mygit/HEAD", &current_branch) != 0) {
+        goto cleanup;
+    }
+    current_branch_name = extract_branch_name(current_branch);
+    if (current_branch_name != NULL && strcmp(current_branch_name, name) == 0) {
+        printf("[branch] cannot delete the current branch '%s'\n", name);
+        goto cleanup;
+    }
+    branch_path = malloc(strlen(".mygit/refs/heads/") + strlen(name) + 1);
+    if (branch_path == NULL) {
+        goto cleanup;
+    }
+    sprintf(branch_path, ".mygit/refs/heads/%s", name);
+    if (remove(branch_path) != 0) {
+        printf("[branch] failed to delete '%s'\n", name);
+        goto cleanup;
+    }
+    printf("[branch] deleted '%s'\n", name);
+    status = 0;
+
+cleanup:
+    free(current_branch);
+    free(branch_path);
+    branch_destroy_names(names, count);
+    return (status);
 }
 
 
@@ -208,7 +270,7 @@ void branch_destroy_names(char **names, int count) {
 
 static int input_check(int argc, char **argv, char *b_name) {
     if (argc < 2) {
-        printf("[branch] usage: mygit branch\n\tmygit branch branch_name to create a branch\n");
+        print_branch_usage();
         return (-1);
     }
     if (strcmp(argv[1], "branch") != 0) {
@@ -225,7 +287,21 @@ static int input_check(int argc, char **argv, char *b_name) {
         strcpy(b_name, argv[2]);
         return (2);
     }
+    if (argc == 4 && strcmp(argv[2], "-d") == 0) {
+        if (strlen(argv[3]) > 16) {
+            printf("[branch] Max allowed len for a branch name is 16 char\n");
+            return (-1);
+        }
+        strcpy(b_name, argv[3]);
+        return (3);
+    }
 
-    printf("[branch] usage: mygit branch\n\tmygit branch branch_name to create a branch\n");
+    print_branch_usage();
     return (-1);
+}
+
+static void print_branch_usage(void) {
+    printf("[branch] usage: mygit branch\n");
+    printf("\tmygit branch branch_name to create a branch\n");
+    printf("\tmygit branch -d branch_name to delete a branch\n");
 }

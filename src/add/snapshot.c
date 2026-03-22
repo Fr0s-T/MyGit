@@ -5,6 +5,7 @@
 
 #include "add_snapshot.h"
 #include "add_traversal.h"
+#include "gitignore.h"
 #include "hash.h"
 #include "helpers/file_io.h"
 
@@ -13,6 +14,7 @@ static int filter_unchanged_files(file_data **files, int *len_files, const char 
 int add_collect_changed_files(const char *cwd, file_data ***files_out, int *len_out) {
     file_data **files;
     int len_files;
+    gitignore ignore;
 
     if (cwd == NULL || files_out == NULL || len_out == NULL) {
         return (-1);
@@ -21,14 +23,24 @@ int add_collect_changed_files(const char *cwd, file_data ***files_out, int *len_
     *len_out = 0;
     files = NULL;
     len_files = 0;
-    if (traverse_directory(cwd, &files, &len_files, (char *)cwd) == -1) {
+    ignore.rules = NULL;
+    ignore.count = 0;
+    ignore.index_path = NULL;
+    if (gitignore_load(cwd, &ignore) == -1) {
+        return (-1);
+    }
+    if (traverse_directory(cwd, &files, &len_files, (char *)cwd,
+            &ignore) == -1) {
+        gitignore_destroy(&ignore);
         add_destroy_file_list(files, len_files);
         return (-1);
     }
     if (filter_unchanged_files(files, &len_files, cwd) == -1) {
+        gitignore_destroy(&ignore);
         add_destroy_file_list(files, len_files);
         return (-1);
     }
+    gitignore_destroy(&ignore);
     *files_out = files;
     *len_out = len_files;
     return (0);
